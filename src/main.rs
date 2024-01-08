@@ -47,14 +47,33 @@ impl ScreenState {
     fn render_help(&self, qc: &mut impl Write) -> io::Result<u16> {
         let (cols, _) = terminal::size()?;
         let mut line_num = 0;
+        let col_num = 32;
         qc.queue(cursor::MoveTo(0, line_num))?;
         qc.queue(style::Print("Help"))?;
         line_num += 1; 
+
         qc.queue(cursor::MoveTo(0, line_num))?;
-        qc.queue(style::Print("To quite the program:           q"))?;
+        qc.queue(style::Print("To quite the program:"))?;
+        qc.queue(cursor::MoveTo(col_num, line_num))?;
+        qc.queue(style::Print("q"))?;
         line_num += 1; 
+
         qc.queue(cursor::MoveTo(0, line_num))?;
-        qc.queue(style::Print("To search the history:          /"))?;
+        qc.queue(style::Print("To search the history:"))?;
+        qc.queue(cursor::MoveTo(col_num, line_num))?;
+        qc.queue(style::Print("/"))?;
+        line_num += 1; 
+
+        qc.queue(cursor::MoveTo(0, line_num))?;
+        qc.queue(style::Print("Up:"))?;
+        qc.queue(cursor::MoveTo(col_num, line_num))?;
+        qc.queue(style::Print("k"))?;
+        line_num += 1; 
+
+        qc.queue(cursor::MoveTo(0, line_num))?;
+        qc.queue(style::Print("Down:"))?;
+        qc.queue(cursor::MoveTo(col_num, line_num))?;
+        qc.queue(style::Print("j"))?;
         line_num += 1; 
 
         for col in 0..cols {
