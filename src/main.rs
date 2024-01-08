@@ -2,7 +2,7 @@ mod renderer;
 mod history;
 mod config;
 
-use crate::history::History;
+use crate::history::{MoveDirection, History};
 use clap::{Parser, Subcommand};
 use crossterm::{execute, style, cursor};
 use crossterm::terminal::{self, EnterAlternateScreen, Clear, ClearType, LeaveAlternateScreen};
@@ -33,6 +33,7 @@ enum View {
 
 struct ScreenState {
     view: View,
+    help_line_count: u16,
 }
 
 impl ScreenState {
@@ -40,50 +41,54 @@ impl ScreenState {
         execute!(stdout(), EnterAlternateScreen)?;
         terminal::enable_raw_mode()?;
         Ok(Self {
-            view: View::List
+            view: View::List,
+            help_line_count: 0
         })
     }
 
-    fn render_help(&self, qc: &mut impl Write) -> io::Result<u16> {
+    fn render_help(&mut self, qc: &mut impl Write) -> io::Result<()> {
         let (cols, _) = terminal::size()?;
-        let mut line_num = 0;
+
+        self.help_line_count = 0;
+
         let col_num = 32;
-        qc.queue(cursor::MoveTo(0, line_num))?;
+        qc.queue(cursor::MoveTo(0, self.help_line_count))?;
         qc.queue(style::Print("Help"))?;
-        line_num += 1; 
+        
+        self.help_line_count += 1; 
 
-        qc.queue(cursor::MoveTo(0, line_num))?;
+        qc.queue(cursor::MoveTo(0, self.help_line_count))?;
         qc.queue(style::Print("To quite the program:"))?;
-        qc.queue(cursor::MoveTo(col_num, line_num))?;
+        qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
         qc.queue(style::Print("q"))?;
-        line_num += 1; 
+        self.help_line_count += 1; 
 
-        qc.queue(cursor::MoveTo(0, line_num))?;
+        qc.queue(cursor::MoveTo(0, self.help_line_count))?;
         qc.queue(style::Print("To search the history:"))?;
-        qc.queue(cursor::MoveTo(col_num, line_num))?;
+        qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
         qc.queue(style::Print("/"))?;
-        line_num += 1; 
+        self.help_line_count += 1; 
 
-        qc.queue(cursor::MoveTo(0, line_num))?;
+        qc.queue(cursor::MoveTo(0, self.help_line_count))?;
         qc.queue(style::Print("Up:"))?;
-        qc.queue(cursor::MoveTo(col_num, line_num))?;
+        qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
         qc.queue(style::Print("k"))?;
-        line_num += 1; 
+        self.help_line_count += 1; 
 
-        qc.queue(cursor::MoveTo(0, line_num))?;
+        qc.queue(cursor::MoveTo(0, self.help_line_count))?;
         qc.queue(style::Print("Down:"))?;
-        qc.queue(cursor::MoveTo(col_num, line_num))?;
+        qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
         qc.queue(style::Print("j"))?;
-        line_num += 1; 
+        self.help_line_count += 1; 
 
         for col in 0..cols {
-            qc.queue(cursor::MoveTo(col, line_num))?;
+            qc.queue(cursor::MoveTo(col, self.help_line_count))?;
             qc.queue(style::Print("-"))?;
         }
-        line_num += 1; 
+        self.help_line_count += 1; 
         qc.flush()?;
 
-        return Ok(line_num);
+        Ok(())
     }
 
     fn reset(&self, qc: &mut impl Write) -> io::Result<()> {
@@ -119,32 +124,58 @@ fn main() -> anyhow::Result<()>{
             todo!();
         },
         None => {
-            let history = History::default();
-            let screen = ScreenState::enable()?;
+            let mut history = History::new()?;
+            let mut screen = ScreenState::enable()?;
             let mut stdout = stdout();
 
             while !history.quit {
                 let _ = screen.reset(&mut stdout)?;
-                let line_num = screen.render_help(&mut stdout)?;
+                let _ = screen.render_help(&mut stdout)?;
 
                 match screen.view {
                     View::List => {
-                        stdout.queue(cursor::MoveTo(0, line_num))?;
-                        stdout.queue(style::Print("working"))?;
+                        stdout.queue(cursor::MoveTo(0, screen.help_line_count))?;
+
+                        for (idx, item) in history.visible_commands.iter().enumerate() {
+                            let next_row = screen.help_line_count + idx as u16 + 1;
+                            let arrow = if idx == history.selected_idx {
+                                ">  "
+                            } else {
+                                "   "
+                            };
+                            stdout.queue(style::Print(format!("{}{}", arrow, item)))?;
+                            stdout.queue(cursor::MoveTo(0, next_row))?;
+                        }
+
                         stdout.flush()?;
                     }
                 }
 
                 if let Event::Key(KeyEvent { code,  .. }) = event::read()? {
                     match code {
+                        KeyCode::Char('k') => {
+                            history.move_selected_index(MoveDirection::Up);
+                        },
+                        KeyCode::Char('j') => {
+                            history.move_selected_index(MoveDirection::Down);
+                        },
+                        KeyCode::Char('/') => {
+                            //println!("/")
+                            //self.selected_index = 0;
+                            //self.view = ViewState::Search;
+                            //self.search_query = String::from("");
+                        }
+                        KeyCode::Enter => {
+                            //println!("/")
+                            //self.save_command()?;
+                        },
                         KeyCode::Char('q') => {
-                            break;
+                            history.quit = true;
                         },
                         _ => {}
                     }
                 }
 
-                stdout.flush()?;
                 thread::sleep(Duration::from_millis(16));
             }
         }

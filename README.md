@@ -1,7 +1,12 @@
 # Ghi
 
 The key ingredient to get you cooking in your code.
----
+
+### TODO:
+[] remove duplicates from the history
+
+
+--- 
 
 ### Why?
 I wanted to get more familiar with command line tools, but I don't use new commands enough to learn them and remember then. Thus, this tool has a few things that solves this prolem:
