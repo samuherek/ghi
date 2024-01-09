@@ -1,6 +1,8 @@
 use anyhow::anyhow;
 use std::collections::HashSet;
 use std::{env, fs};
+use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 
 type HistoryCommand = String;
 type HistoryCommands = Vec<HistoryCommand>;
@@ -12,7 +14,8 @@ pub enum MoveDirection {
 
 #[derive(Default)]
 pub struct History {
-    query: String,
+    pub query: String,
+    prev_query: String,
     pub results: HistoryCommands,
     history: HistoryCommands,
     pub selected_idx: usize,
@@ -41,10 +44,46 @@ impl History {
 
         Ok(History {
             query: String::from(""),
+            prev_query: String::from(""),
             results: Vec::new(), 
             history: data,
             selected_idx: 0,
         })
+    }
+
+    pub fn init_search(&mut self, limit: usize) -> &Vec<String> {
+        self.results = self.history.iter().take(limit).cloned().collect();
+        return &self.results; 
+    }
+
+    pub fn search(&mut self, limit: usize) -> &Vec<String> {
+        if self.query == self.prev_query {
+            return &self.results; 
+        } else {
+            if self.query == "" {
+                self.results = self.history.iter().take(limit).cloned().collect();
+            } else {
+                let matcher = SkimMatcherV2::default();
+
+                self.results = self.history.iter().filter_map(|x| {
+                    matcher.fuzzy_match(x, &self.query).map(|score| (x, score))
+                })
+                .take(limit)
+                .map(|(x, _)| x.clone())
+                .collect();
+            }
+            return &self.results; 
+        }
+    }
+
+    pub fn append_query(&mut self, x: char) {
+        self.selected_idx = 0;
+        self.query.push(x);
+    }
+
+    pub fn backspace_query(&mut self) {
+        self.selected_idx = 0;
+        self.query.pop();
     }
 
     pub fn move_selected_index(&mut self, dir: MoveDirection) {

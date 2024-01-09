@@ -134,30 +134,41 @@ fn main() -> anyhow::Result<()>{
             let mut screen = ScreenState::enable()?;
             let mut stdout = stdout();
 
+            history.init_search((terminal::size()?.1 - 15).into());
+
             while !screen.quit {
                 let _ = screen.reset(&mut stdout)?;
                 let _ = screen.render_help(&mut stdout)?;
-                let (_, screen_rows) = terminal::size()?;
+                let (screen_cols, screen_rows) = terminal::size()?;
+                let search_rows = 2;
 
-                match screen.view {
-                    View::Search => {
-                        let _available_count = screen_rows - screen.help_line_count;
-                        stdout.queue(cursor::MoveTo(0, screen.help_line_count))?;
+                stdout.queue(cursor::MoveTo(0, screen.help_line_count))?;
 
-                        for (idx, item) in history.results.iter().enumerate() {
-                            let next_row = screen.help_line_count + idx as u16 + 1;
-                            let arrow = if idx == history.selected_idx {
-                                ">  "
-                            } else {
-                                "   "
-                            };
-                            stdout.queue(style::Print(format!("{}{}", arrow, item)))?;
-                            stdout.queue(cursor::MoveTo(0, next_row))?;
-                        }
+                let visible_rows = (screen_rows - screen.help_line_count - search_rows).into();
+                let selected_idx = history.selected_idx;
 
-                        stdout.flush()?;
-                    },
+                for (idx, item) in history.search(visible_rows).iter().enumerate() {
+                    let next_row = screen.help_line_count + idx as u16 + 1;
+                    let arrow = if idx == selected_idx {
+                        ">  "
+                    } else {
+                        "   "
+                    };
+                    stdout.queue(style::Print(format!("{}{}", arrow, item)))?;
+                    stdout.queue(cursor::MoveTo(0, next_row))?;
                 }
+
+                stdout.flush()?;
+
+                for col in 0..screen_cols {
+                    stdout.queue(cursor::MoveTo(col, screen_rows - search_rows))?;
+                    stdout.queue(style::Print("-"))?;
+                }
+
+                stdout.queue(cursor::MoveTo(0, screen_rows - 1))?;
+                stdout.queue(style::Print(format!("{}", history.query)))?;
+
+                stdout.flush()?;
 
                 if let Event::Key(event) = event::read()? {
                     match event.code {
@@ -169,7 +180,12 @@ fn main() -> anyhow::Result<()>{
                                     'p' => history.move_selected_index(MoveDirection::Up),
                                     _ => {}
                                 }
+                            } else {
+                                history.append_query(x);
                             }
+                        },
+                        KeyCode::Backspace => {
+                            history.backspace_query();
                         },
                         KeyCode::Enter => {
                             //println!("/")
@@ -179,7 +195,9 @@ fn main() -> anyhow::Result<()>{
                     }
                 }
 
-                thread::sleep(Duration::from_millis(16));
+                // TODO: is this necessary? It makes sense but at the same time
+                // when I navigate through the queries, it flickers. 
+                //thread::sleep(Duration::from_millis(16));
             }
         }
     }
