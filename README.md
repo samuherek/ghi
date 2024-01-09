@@ -3,7 +3,13 @@
 The key ingredient to get you cooking in your code.
 
 ### TODO:
-[] remove duplicates from the history
+[ ] removing query to emtpy one does not reset the serach after the 1 char left.
+[ ] enter submits the comand and saves it into .config files
+[ ] add the build binary to my paths so I can start using it on the laptop
+[ ] create a configuration object that sets the storage path (I want to add it to synology to share across computers)
+
+### DONE
+[-] remove duplicates from the history
 
 
 --- 
