@@ -10,7 +10,7 @@ use std::io::{self, stdout, Write};
 use std::thread;
 use std::time::Duration;
 use crossterm::QueueableCommand;
-use crossterm::event::{self, KeyCode, KeyEvent, Event};
+use crossterm::event::{self, KeyCode, KeyModifiers, Event};
 
 #[derive(Parser)]
 #[command(author = "Sam Uherek <samuherekbiz@gmail.com>")]
@@ -28,12 +28,13 @@ pub enum Commands {
 }
 
 enum View {
-    List
+    Search
 }
 
 struct ScreenState {
     view: View,
     help_line_count: u16,
+    pub quit: bool
 }
 
 impl ScreenState {
@@ -41,9 +42,14 @@ impl ScreenState {
         execute!(stdout(), EnterAlternateScreen)?;
         terminal::enable_raw_mode()?;
         Ok(Self {
-            view: View::List,
-            help_line_count: 0
+            view: View::Search,
+            help_line_count: 0,
+            quit: false
         })
+    }
+
+    fn set(&mut self, view: View) {
+        self.view = view;
     }
 
     fn render_help(&mut self, qc: &mut impl Write) -> io::Result<()> {
@@ -60,25 +66,25 @@ impl ScreenState {
         qc.queue(cursor::MoveTo(0, self.help_line_count))?;
         qc.queue(style::Print("To quite the program:"))?;
         qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
-        qc.queue(style::Print("q"))?;
-        self.help_line_count += 1; 
-
-        qc.queue(cursor::MoveTo(0, self.help_line_count))?;
-        qc.queue(style::Print("To search the history:"))?;
-        qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
-        qc.queue(style::Print("/"))?;
+        qc.queue(style::Print("CTRL + c"))?;
         self.help_line_count += 1; 
 
         qc.queue(cursor::MoveTo(0, self.help_line_count))?;
         qc.queue(style::Print("Up:"))?;
         qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
-        qc.queue(style::Print("k"))?;
+        qc.queue(style::Print("CTRL + p"))?;
         self.help_line_count += 1; 
 
         qc.queue(cursor::MoveTo(0, self.help_line_count))?;
         qc.queue(style::Print("Down:"))?;
         qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
-        qc.queue(style::Print("j"))?;
+        qc.queue(style::Print("CTRL + n"))?;
+        self.help_line_count += 1; 
+
+        qc.queue(cursor::MoveTo(0, self.help_line_count))?;
+        qc.queue(style::Print("Select line:"))?;
+        qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
+        qc.queue(style::Print("enter"))?;
         self.help_line_count += 1; 
 
         for col in 0..cols {
@@ -128,15 +134,17 @@ fn main() -> anyhow::Result<()>{
             let mut screen = ScreenState::enable()?;
             let mut stdout = stdout();
 
-            while !history.quit {
+            while !screen.quit {
                 let _ = screen.reset(&mut stdout)?;
                 let _ = screen.render_help(&mut stdout)?;
+                let (_, screen_rows) = terminal::size()?;
 
                 match screen.view {
-                    View::List => {
+                    View::Search => {
+                        let _available_count = screen_rows - screen.help_line_count;
                         stdout.queue(cursor::MoveTo(0, screen.help_line_count))?;
 
-                        for (idx, item) in history.visible_commands.iter().enumerate() {
+                        for (idx, item) in history.results.iter().enumerate() {
                             let next_row = screen.help_line_count + idx as u16 + 1;
                             let arrow = if idx == history.selected_idx {
                                 ">  "
@@ -148,29 +156,24 @@ fn main() -> anyhow::Result<()>{
                         }
 
                         stdout.flush()?;
-                    }
+                    },
                 }
 
-                if let Event::Key(KeyEvent { code,  .. }) = event::read()? {
-                    match code {
-                        KeyCode::Char('k') => {
-                            history.move_selected_index(MoveDirection::Up);
+                if let Event::Key(event) = event::read()? {
+                    match event.code {
+                        KeyCode::Char(x) => {
+                            if event.modifiers.contains(KeyModifiers::CONTROL) {
+                                match x {
+                                    'c' => screen.quit = true,
+                                    'n' => history.move_selected_index(MoveDirection::Down),
+                                    'p' => history.move_selected_index(MoveDirection::Up),
+                                    _ => {}
+                                }
+                            }
                         },
-                        KeyCode::Char('j') => {
-                            history.move_selected_index(MoveDirection::Down);
-                        },
-                        KeyCode::Char('/') => {
-                            //println!("/")
-                            //self.selected_index = 0;
-                            //self.view = ViewState::Search;
-                            //self.search_query = String::from("");
-                        }
                         KeyCode::Enter => {
                             //println!("/")
                             //self.save_command()?;
-                        },
-                        KeyCode::Char('q') => {
-                            history.quit = true;
                         },
                         _ => {}
                     }

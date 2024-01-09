@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use std::path::PathBuf;
+use std::collections::HashSet;
 use std::{env, fs};
 
 type HistoryCommand = String;
@@ -12,12 +12,10 @@ pub enum MoveDirection {
 
 #[derive(Default)]
 pub struct History {
-    search_query: String,
-    pub visible_commands: HistoryCommands,
-    all_commands: HistoryCommands,
-    visible_limit: usize,
+    query: String,
+    pub results: HistoryCommands,
+    history: HistoryCommands,
     pub selected_idx: usize,
-    pub quit: bool
 }
 
 impl History {
@@ -32,25 +30,25 @@ impl History {
             _ => Err(anyhow!("We could not find your shell.")),
         }?;
         
-        let limit = 10;
-        let data: Vec<String> = fs::read_to_string(shell_path)? 
-            .lines()
-            .rev()
-            .map(|x| x.to_string())
-            .collect();
+        let mut cache = HashSet::new();
+        let mut data = Vec::new();
+
+        for line in fs::read_to_string(shell_path)?.lines().rev() {
+            if cache.insert(line) {
+                data.push(line.to_string());
+            }
+        }
 
         Ok(History {
-            search_query: String::from(""),
-            visible_commands: data.iter().take(limit).cloned().collect(),
-            all_commands: data,
-            visible_limit: limit,
+            query: String::from(""),
+            results: Vec::new(), 
+            history: data,
             selected_idx: 0,
-            quit: false
         })
     }
 
     pub fn move_selected_index(&mut self, dir: MoveDirection) {
-        if self.visible_commands.len() == 0 {
+        if self.results.len() == 0 {
             return;
         }
 
@@ -59,7 +57,7 @@ impl History {
                 self.selected_idx = self.selected_idx.saturating_sub(1);
             },
             MoveDirection::Down => {
-                self.selected_idx = (self.selected_idx + 1).min(self.visible_commands.len() - 1);
+                self.selected_idx = (self.selected_idx + 1).min(self.results.len() - 1);
             }
         }
     }
