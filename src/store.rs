@@ -24,6 +24,10 @@ impl DbIndex {
     pub fn has(&self, val: &str) -> bool {
         self.0.iter().any(|x| x == val)
     }
+
+    fn all(&self) -> &Vec<DbItem> {
+        &self.0       
+    }
 }
 
 impl FromStr for DbIndex {
@@ -85,6 +89,10 @@ impl Store {
     fn commit(&self) -> io::Result<()> {
         fs::write(&self.file, self.db.to_string())?;
         Ok(())
+    }
+
+    pub fn all(&self) -> &Vec<DbItem> {
+       self.db.all()
     }
 }
 

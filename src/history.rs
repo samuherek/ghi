@@ -117,6 +117,17 @@ impl History {
         }
     }
 
+    pub fn add(&mut self) {
+        if let Some(cmd) = self.results.get_mut(self.selected_idx) {
+            cmd.selected = true; 
+            for item in self.history.iter_mut() {
+                if item.value == cmd.value {
+                    item.selected = true;
+                }
+            }
+        }
+    }
+
     pub fn get_selection(&self) -> Option<&HistoryCommand> {
         self.results.get(self.selected_idx)
     }

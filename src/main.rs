@@ -28,7 +28,8 @@ pub enum Commands {
 }
 
 enum View {
-    Search
+    Search,
+    List
 }
 
 struct ScreenState {
@@ -130,79 +131,111 @@ fn main() -> anyhow::Result<()>{
             let mut history = History::new(&store)?;
             let mut screen = ScreenState::enable()?;
             let mut stdout = stdout();
+            let (screen_cols, screen_rows) = terminal::size()?;
 
-            history.init_search((terminal::size()?.1 - 15).into());
+            history.init_search((screen_rows - 15).into());
 
             while !screen.quit {
                 let _ = screen.reset(&mut stdout)?;
                 let _ = screen.render_help(&mut stdout)?;
-                let (screen_cols, screen_rows) = terminal::size()?;
                 let search_rows = 2;
 
                 stdout.queue(cursor::MoveTo(0, screen.help_line_count))?;
-
                 let visible_rows = (screen_rows - screen.help_line_count - search_rows).into();
-                let selected_idx = history.selected_idx;
 
-                for (idx, item) in history.search(visible_rows).iter().enumerate() {
-                    let next_row = screen.help_line_count + idx as u16 + 1;
-                    let is_curr = idx == selected_idx;
-                    let arrow = if is_curr {
-                        "> "
-                    } else {
-                        "  "
-                    };
+                match screen.view {
+                    View::Search => {
+                        let selected_idx = history.selected_idx;
 
-                    let selected_dot = if item.selected {
-                        "o "
-                    } else {
-                        "  " 
-                    };
-
-                    if is_curr {
-                        stdout.queue(style::SetForegroundColor(style::Color::Green))?;
-                    } else if item.selected {
-                        stdout.queue(style::SetForegroundColor(style::Color::DarkGreen))?;
-                    };
-                    stdout.queue(style::Print(format!("{}{}{}", selected_dot, arrow, item.value)))?;
-                    stdout.queue(style::SetForegroundColor(style::Color::Reset))?;
-                    stdout.queue(cursor::MoveTo(0, next_row))?;
-                }
-
-                for col in 0..screen_cols {
-                    stdout.queue(cursor::MoveTo(col, screen_rows - search_rows))?;
-                    stdout.queue(style::Print("-"))?;
-                }
-
-                stdout.queue(cursor::MoveTo(0, screen_rows - 1))?;
-                stdout.queue(style::Print(format!("{}", history.query)))?;
-
-                stdout.flush()?;
-
-                if let Event::Key(event) = event::read()? {
-                    match event.code {
-                        KeyCode::Char(x) => {
-                            if event.modifiers.contains(KeyModifiers::CONTROL) {
-                                match x {
-                                    'c' => screen.quit = true,
-                                    'n' => history.move_selected_index(MoveDirection::Down),
-                                    'p' => history.move_selected_index(MoveDirection::Up),
-                                    _ => {}
-                                }
+                        for (idx, item) in history.search(visible_rows).iter().enumerate() {
+                            let next_row = screen.help_line_count + idx as u16 + 1;
+                            let is_curr = idx == selected_idx;
+                            let arrow = if is_curr {
+                                "> "
                             } else {
-                                history.append_query(x);
+                                "  "
+                            };
+
+                            let selected_dot = if item.selected {
+                                "o "
+                            } else {
+                                "  " 
+                            };
+
+                            if is_curr {
+                                stdout.queue(style::SetForegroundColor(style::Color::Green))?;
+                            } else if item.selected {
+                                stdout.queue(style::SetForegroundColor(style::Color::DarkGreen))?;
+                            };
+                            stdout.queue(style::Print(format!("{}{}{}", selected_dot, arrow, item.value)))?;
+                            stdout.queue(style::SetForegroundColor(style::Color::Reset))?;
+                            stdout.queue(cursor::MoveTo(0, next_row))?;
+                        }
+
+                        for col in 0..screen_cols {
+                            stdout.queue(cursor::MoveTo(col, screen_rows - search_rows))?;
+                            stdout.queue(style::Print("-"))?;
+                        }
+
+                        stdout.queue(cursor::MoveTo(0, screen_rows - 1))?;
+                        stdout.queue(style::Print(format!("{}", history.query)))?;
+
+                        stdout.flush()?;
+
+                        if let Event::Key(event) = event::read()? {
+                            match event.code {
+                                KeyCode::Char(x) => {
+                                    if event.modifiers.contains(KeyModifiers::CONTROL) {
+                                        match x {
+                                            'c' => screen.quit = true,
+                                            'n' => history.move_selected_index(MoveDirection::Down),
+                                            'p' => history.move_selected_index(MoveDirection::Up),
+                                            'l' => screen.view = View::List,
+                                            _ => {}
+                                        }
+                                    } else {
+                                        history.append_query(x);
+                                    }
+                                },
+                                KeyCode::Backspace => {
+                                    history.backspace_query();
+                                },
+                                KeyCode::Enter => {
+                                    if let Some(command) = history.get_selection() {
+                                        if !command.selected {
+                                            store.create(&command.value)?;
+                                            history.add();
+                                        }
+                                    }
+                                },
+                                _ => {}
                             }
-                        },
-                        KeyCode::Backspace => {
-                            history.backspace_query();
-                        },
-                        KeyCode::Enter => {
-                            if let Some(command) = history.get_selection() {
-                                store.create(&command.value)?;
-                                screen.quit = true;
+                        }
+                    },
+                    View::List => {
+                        for (idx, item) in store.all().iter().enumerate() {
+                            let next_row = screen.help_line_count + idx as u16 + 1;
+
+                            stdout.queue(style::Print(format!("{}", item)))?;
+                            stdout.queue(cursor::MoveTo(0, next_row))?;
+                        }
+
+                        stdout.flush()?;
+
+                        if let Event::Key(event) = event::read()? {
+                            match event.code {
+                                KeyCode::Char(x) => {
+                                    if event.modifiers.contains(KeyModifiers::CONTROL) {
+                                        match x {
+                                            'c' => screen.quit = true,
+                                            's' => screen.view = View::Search, 
+                                            _ => {}
+                                        }
+                                    } 
+                                },
+                                _ => {}
                             }
-                        },
-                        _ => {}
+                        }
                     }
                 }
 
