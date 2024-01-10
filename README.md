@@ -5,6 +5,10 @@ The key ingredient to get you cooking in your code.
 
 
 ### TODO:
+[ ] highlight the already selected commands in the search list.
+
+[ ] hitting enter in the search list will toggle it in and out of the list.
+
 [ ] removing query to emtpy one does not reset the serach after the 1 char left.
 
 [ ] add the build binary to my paths so I can start using it on the laptop

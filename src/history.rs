@@ -3,26 +3,38 @@ use std::collections::HashSet;
 use std::{env, fs};
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
+use super::store;
 
-type HistoryCommand = String;
-type HistoryCommands = Vec<HistoryCommand>;
+#[derive(Clone)]
+pub struct HistoryCommand {
+    pub value: String,
+    pub selected: bool,
+}
+
+impl HistoryCommand {
+    pub fn new(val: &str, selected: bool) -> Self {
+        HistoryCommand {
+            value: val.to_string(),
+            selected
+        }
+    }
+}
 
 pub enum MoveDirection {
     Up,
     Down
 }
 
-#[derive(Default)]
 pub struct History {
     pub query: String,
     prev_query: String,
-    pub results: HistoryCommands,
-    history: HistoryCommands,
+    pub results: Vec<HistoryCommand>,
+    history: Vec<HistoryCommand>,
     pub selected_idx: usize,
 }
 
 impl History {
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new(store: &store::Store) -> anyhow::Result<Self> {
         let shell_path = env::var("SHELL")?;
         let shell_name = shell_path.rsplit('/').next().unwrap_or("");
         let home_dir = dirs::home_dir().expect("Could not determine home dir");
@@ -38,7 +50,11 @@ impl History {
 
         for line in fs::read_to_string(shell_path)?.lines().rev() {
             if cache.insert(line) {
-                data.push(line.to_string());
+                let is_stored = store.db.has(line);
+                data.push(HistoryCommand { 
+                    value: line.to_string(), 
+                    selected: is_stored
+                });
             }
         }
 
@@ -51,12 +67,12 @@ impl History {
         })
     }
 
-    pub fn init_search(&mut self, limit: usize) -> &Vec<String> {
+    pub fn init_search(&mut self, limit: usize) -> &Vec<HistoryCommand> {
         self.results = self.history.iter().take(limit).cloned().collect();
         return &self.results; 
     }
 
-    pub fn search(&mut self, limit: usize) -> &Vec<String> {
+    pub fn search(&mut self, limit: usize) -> &Vec<HistoryCommand> {
         if self.query == self.prev_query {
             return &self.results; 
         } else {
@@ -66,7 +82,7 @@ impl History {
                 let matcher = SkimMatcherV2::default();
 
                 self.results = self.history.iter().filter_map(|x| {
-                    matcher.fuzzy_match(x, &self.query).map(|score| (x, score))
+                    matcher.fuzzy_match(&x.value, &self.query).map(|score| (x, score))
                 })
                 .take(limit)
                 .map(|(x, _)| x.clone())
@@ -101,7 +117,7 @@ impl History {
         }
     }
 
-    pub fn get_selection(&self) -> Option<&String> {
+    pub fn get_selection(&self) -> Option<&HistoryCommand> {
         self.results.get(self.selected_idx)
     }
 }

@@ -126,8 +126,8 @@ fn main() -> anyhow::Result<()>{
             todo!();
         },
         None => {
-            let store = Store::init()?;
-            let mut history = History::new()?;
+            let mut store = Store::init()?;
+            let mut history = History::new(&store)?;
             let mut screen = ScreenState::enable()?;
             let mut stdout = stdout();
 
@@ -151,7 +151,7 @@ fn main() -> anyhow::Result<()>{
                     } else {
                         "   "
                     };
-                    stdout.queue(style::Print(format!("{}{}", arrow, item)))?;
+                    stdout.queue(style::Print(format!("{}{}", arrow, item.value)))?;
                     stdout.queue(cursor::MoveTo(0, next_row))?;
                 }
 
@@ -184,7 +184,7 @@ fn main() -> anyhow::Result<()>{
                         },
                         KeyCode::Enter => {
                             if let Some(command) = history.get_selection() {
-                                store.create(command)?;
+                                store.create(&command.value)?;
                                 screen.quit = true;
                             }
                         },
