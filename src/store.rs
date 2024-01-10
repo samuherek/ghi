@@ -2,6 +2,7 @@ use std::{fs, io};
 use std::path::PathBuf;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::io::Write;
 
 const DOTFOLDER_PATH: &str = ".ghi";
 
@@ -25,19 +26,20 @@ impl Store {
     }
 
     pub fn create(&self, value: &String) -> io::Result<()> {
-        let name =  file_name(value);
-        let path = self.path.join(name);
+        let path = self.path.join("index.md");
         
         if !path.exists() {
-            let data = format!("{}\n\n", value);
-            fs::write(path, data)?;
+            fs::File::create(&path)?;
         }
+
+        let mut file = fs::File::options().append(true).open(path)?;
+        file.write_all(format!("{}\n", value).as_bytes())?;
 
         Ok(())
     }
 }
 
-fn file_name(value: &str) -> String {
+fn _file_name(value: &str) -> String {
     let command = value.split_whitespace().next().expect("The value is not empty");
     let mut hasher = DefaultHasher::new();
     value.hash(&mut hasher);
