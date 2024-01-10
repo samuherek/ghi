@@ -146,12 +146,26 @@ fn main() -> anyhow::Result<()>{
 
                 for (idx, item) in history.search(visible_rows).iter().enumerate() {
                     let next_row = screen.help_line_count + idx as u16 + 1;
-                    let arrow = if idx == selected_idx {
-                        ">  "
+                    let is_curr = idx == selected_idx;
+                    let arrow = if is_curr {
+                        "> "
                     } else {
-                        "   "
+                        "  "
                     };
-                    stdout.queue(style::Print(format!("{}{}", arrow, item.value)))?;
+
+                    let selected_dot = if item.selected {
+                        "o "
+                    } else {
+                        "  " 
+                    };
+
+                    if is_curr {
+                        stdout.queue(style::SetForegroundColor(style::Color::Green))?;
+                    } else if item.selected {
+                        stdout.queue(style::SetForegroundColor(style::Color::DarkGreen))?;
+                    };
+                    stdout.queue(style::Print(format!("{}{}{}", selected_dot, arrow, item.value)))?;
+                    stdout.queue(style::SetForegroundColor(style::Color::Reset))?;
                     stdout.queue(cursor::MoveTo(0, next_row))?;
                 }
 
