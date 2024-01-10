@@ -100,4 +100,8 @@ impl History {
             }
         }
     }
+
+    pub fn get_selection(&self) -> Option<&String> {
+        self.results.get(self.selected_idx)
+    }
 }

@@ -1,16 +1,16 @@
 mod renderer;
 mod history;
 mod config;
+mod store;
 
 use crate::history::{MoveDirection, History};
 use clap::{Parser, Subcommand};
 use crossterm::{execute, style, cursor};
 use crossterm::terminal::{self, EnterAlternateScreen, Clear, ClearType, LeaveAlternateScreen};
 use std::io::{self, stdout, Write};
-use std::thread;
-use std::time::Duration;
 use crossterm::QueueableCommand;
 use crossterm::event::{self, KeyCode, KeyModifiers, Event};
+use store::Store;
 
 #[derive(Parser)]
 #[command(author = "Sam Uherek <samuherekbiz@gmail.com>")]
@@ -46,10 +46,6 @@ impl ScreenState {
             help_line_count: 0,
             quit: false
         })
-    }
-
-    fn set(&mut self, view: View) {
-        self.view = view;
     }
 
     fn render_help(&mut self, qc: &mut impl Write) -> io::Result<()> {
@@ -130,6 +126,7 @@ fn main() -> anyhow::Result<()>{
             todo!();
         },
         None => {
+            let store = Store::init()?;
             let mut history = History::new()?;
             let mut screen = ScreenState::enable()?;
             let mut stdout = stdout();
@@ -157,8 +154,6 @@ fn main() -> anyhow::Result<()>{
                     stdout.queue(style::Print(format!("{}{}", arrow, item)))?;
                     stdout.queue(cursor::MoveTo(0, next_row))?;
                 }
-
-                stdout.flush()?;
 
                 for col in 0..screen_cols {
                     stdout.queue(cursor::MoveTo(col, screen_rows - search_rows))?;
@@ -188,8 +183,10 @@ fn main() -> anyhow::Result<()>{
                             history.backspace_query();
                         },
                         KeyCode::Enter => {
-                            //println!("/")
-                            //self.save_command()?;
+                            if let Some(command) = history.get_selection() {
+                                store.create(command)?;
+                                screen.quit = true;
+                            }
                         },
                         _ => {}
                     }
