@@ -98,7 +98,14 @@ impl ScreenState {
     }
 
     fn search(&mut self, store: &Store, limit: usize) {
-        self.results = store.get_history_refs(&self.query, limit);
+        match self.view {
+            View::History => {
+                self.results = store.get_history_refs(&self.query, limit);
+            },
+            View::List => {
+                self.results = store.get_refs(&self.query, limit);
+            }
+        }
     }
 
     fn render_help(&mut self, qc: &mut impl Write) -> io::Result<()> {
@@ -241,7 +248,10 @@ fn main() -> anyhow::Result<()>{
                                             'c' => screen.quit = true,
                                             'n' => screen.move_selected_index(MoveDirection::Down),
                                             'p' => screen.move_selected_index(MoveDirection::Up),
-                                            'l' => screen.set_view(View::List),
+                                            'l' => {
+                                                screen.set_view(View::List);
+                                                screen.search(&store, visible_rows);
+                                            }
                                             _ => {}
                                         }
                                     } else {
@@ -267,12 +277,32 @@ fn main() -> anyhow::Result<()>{
                         }
                     },
                     View::List => {
-                        for (idx, item) in store.all().iter().enumerate() {
-                            let next_row = screen.help_line_count + idx as u16 + 1;
+                        for (idx, item) in screen.results.iter().enumerate() {
+                            if let Some(item) = store.get_item(*item) {
+                                let next_row = screen.help_line_count + idx as u16 + 1;
+                                let is_curr = idx == screen.selected_idx;
+                                let arrow = if is_curr {
+                                    "> "
+                                } else {
+                                    "  "
+                                };
 
-                            stdout.queue(style::Print(format!("{}", item)))?;
-                            stdout.queue(cursor::MoveTo(0, next_row))?;
+                                if is_curr {
+                                    stdout.queue(style::SetForegroundColor(style::Color::Green))?;
+                                } 
+                                stdout.queue(style::Print(format!("{}{}", arrow, item)))?;
+                                stdout.queue(style::SetForegroundColor(style::Color::Reset))?;
+                                stdout.queue(cursor::MoveTo(0, next_row))?;
+                            }
                         }
+
+                        for col in 0..screen_cols {
+                            stdout.queue(cursor::MoveTo(col, screen_rows - screen.search_rows_count))?;
+                            stdout.queue(style::Print("-"))?;
+                        }
+
+                        stdout.queue(cursor::MoveTo(0, screen_rows - 1))?;
+                        stdout.queue(style::Print(format!("{}", screen.query)))?;
 
                         stdout.flush()?;
 
@@ -282,14 +312,31 @@ fn main() -> anyhow::Result<()>{
                                     if event.modifiers.contains(KeyModifiers::CONTROL) {
                                         match x {
                                             'c' => screen.quit = true,
-                                            //'n' => history.move_selected_index(MoveDirection::Down),
-                                            //'p' => history.move_selected_index(MoveDirection::Up),
+                                            'n' => screen.move_selected_index(MoveDirection::Down),
+                                            'p' => screen.move_selected_index(MoveDirection::Up),
                                             's' => {
                                                 screen.set_view(View::History);
+                                                screen.search(&store, visible_rows);
                                             },
                                             _ => {}
                                         }
-                                    } 
+                                    } else {
+                                        screen.append_query(x);
+                                        screen.search(&store, visible_rows);
+                                    }
+                                },
+                                KeyCode::Backspace => {
+                                    screen.backspace_query();
+                                    screen.search(&store, visible_rows);
+                                },
+                                KeyCode::Enter => {
+                                    let _item = screen.get_selected().and_then(|x| store.get_item(*x));
+                                    //if let Some(command) = item {
+                                        //if !command {
+                                            //store.create(&command.value)?;
+                                            //history.add();
+                                        //}
+                                    //}
                                 },
                                 _ => {}
                             }

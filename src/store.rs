@@ -29,12 +29,26 @@ impl DbIndex {
         self.0.push(val.to_string())
     }
 
+    fn get(&self, idx: usize) -> Option<&DbItem> {
+        self.0.get(idx)
+    }
+
     pub fn has(&self, val: &str) -> bool {
         self.0.iter().any(|x| x == val)
     }
 
     fn all(&self) -> &Vec<DbItem> {
         &self.0       
+    }
+
+    fn filter(&self, search: &str, limit: usize) -> Vec<usize> {
+        let matcher = SkimMatcherV2::default();
+        self.0.iter().enumerate().filter_map(|(idx, x)| {
+            matcher.fuzzy_match(&x, search).map(|score| (idx, score))
+        })
+        .take(limit)
+        .map(|(idx, _)| idx)
+        .collect()
     }
 }
 
@@ -193,6 +207,14 @@ impl Store {
 
     pub fn get_history_item(&self, idx: usize) -> Option<&HistoryItem> {
         self.cache.history.get(idx)
+    }
+
+    pub fn get_item(&self, idx: usize) -> Option<&DbItem>{
+        self.cache.db.get(idx)
+    }
+
+    pub fn get_refs(&self, search: &str, limit: usize) -> Vec<usize> {
+        self.cache.db.filter(search, limit)
     }
 
     pub fn create(&mut self, value: &str) -> io::Result<()> {
