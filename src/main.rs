@@ -1,9 +1,5 @@
-mod renderer;
-mod history;
-mod config;
 mod store;
 
-use crate::history::{MoveDirection, History};
 use clap::{Parser, Subcommand};
 use crossterm::{execute, style, cursor};
 use crossterm::terminal::{self, EnterAlternateScreen, Clear, ClearType, LeaveAlternateScreen};
@@ -27,14 +23,24 @@ pub enum Commands {
     List
 }
 
+#[derive(PartialEq)]
 enum View {
-    Search,
+    History,
     List
+}
+
+enum MoveDirection {
+    Up,
+    Down
 }
 
 struct ScreenState {
     view: View,
     help_line_count: u16,
+    search_rows_count: u16,
+    query: String,
+    results: Vec<usize>,
+    selected_idx: usize,
     pub quit: bool
 }
 
@@ -43,10 +49,56 @@ impl ScreenState {
         execute!(stdout(), EnterAlternateScreen)?;
         terminal::enable_raw_mode()?;
         Ok(Self {
-            view: View::Search,
+            view: View::History,
+            query: String::from(""),
+            results: Vec::new(),
+            selected_idx: 0,
             help_line_count: 0,
+            search_rows_count: 2,
             quit: false
         })
+    }
+
+    pub fn move_selected_index(&mut self, dir: MoveDirection) {
+        if self.results.len() == 0 {
+            return;
+        }
+
+        match dir {
+            MoveDirection::Up => {
+                self.selected_idx = self.selected_idx.saturating_sub(1);
+            },
+            MoveDirection::Down => {
+                self.selected_idx = (self.selected_idx + 1).min(self.results.len() - 1);
+            }
+        }
+    }
+
+    pub fn set_view(&mut self, view: View) {
+        if self.view != view {
+            self.query.clear();
+            self.results.clear();
+            self.selected_idx = 0;
+            self.view = view;
+        }
+    }
+   
+    pub fn append_query(&mut self, x: char) {
+        self.selected_idx = 0;
+        self.query.push(x);
+    }
+
+    pub fn backspace_query(&mut self) {
+        self.selected_idx = 0;
+        self.query.pop();
+    }
+
+    pub fn get_selected(&self) -> Option<&usize> {
+        self.results.get(self.selected_idx) 
+    }
+
+    fn search(&mut self, store: &Store, limit: usize) {
+        self.results = store.get_history_refs(&self.query, limit);
     }
 
     fn render_help(&mut self, qc: &mut impl Write) -> io::Result<()> {
@@ -127,58 +179,57 @@ fn main() -> anyhow::Result<()>{
             todo!();
         },
         None => {
-            let mut store = Store::init()?;
-            let mut history = History::new(&store)?;
+            let mut store = Store::new();
+            let _ = store.init();
             let mut screen = ScreenState::enable()?;
             let mut stdout = stdout();
             let (screen_cols, screen_rows) = terminal::size()?;
 
-            history.init_search((screen_rows - 15).into());
+            screen.search(&store, screen_rows.saturating_sub(15).into());
 
             while !screen.quit {
                 let _ = screen.reset(&mut stdout)?;
                 let _ = screen.render_help(&mut stdout)?;
-                let search_rows = 2;
 
                 stdout.queue(cursor::MoveTo(0, screen.help_line_count))?;
-                let visible_rows = (screen_rows - screen.help_line_count - search_rows).into();
+                let visible_rows: usize = (screen_rows - screen.help_line_count - screen.search_rows_count).into();
 
                 match screen.view {
-                    View::Search => {
-                        let selected_idx = history.selected_idx;
+                    View::History => {
+                        for (idx, item) in screen.results.iter().enumerate() {
+                            if let Some(item) = store.get_history_item(*item) {
+                                let next_row = screen.help_line_count + idx as u16 + 1;
+                                let is_curr = idx == screen.selected_idx;
+                                let arrow = if is_curr {
+                                    "> "
+                                } else {
+                                    "  "
+                                };
 
-                        for (idx, item) in history.search(visible_rows).iter().enumerate() {
-                            let next_row = screen.help_line_count + idx as u16 + 1;
-                            let is_curr = idx == selected_idx;
-                            let arrow = if is_curr {
-                                "> "
-                            } else {
-                                "  "
-                            };
+                                let selected_dot = if item.selected {
+                                    "o "
+                                } else {
+                                    "  " 
+                                };
 
-                            let selected_dot = if item.selected {
-                                "o "
-                            } else {
-                                "  " 
-                            };
-
-                            if is_curr {
-                                stdout.queue(style::SetForegroundColor(style::Color::Green))?;
-                            } else if item.selected {
-                                stdout.queue(style::SetForegroundColor(style::Color::DarkGreen))?;
-                            };
-                            stdout.queue(style::Print(format!("{}{}{}", selected_dot, arrow, item.value)))?;
-                            stdout.queue(style::SetForegroundColor(style::Color::Reset))?;
-                            stdout.queue(cursor::MoveTo(0, next_row))?;
+                                if is_curr {
+                                    stdout.queue(style::SetForegroundColor(style::Color::Green))?;
+                                } else if item.selected {
+                                    stdout.queue(style::SetForegroundColor(style::Color::DarkGreen))?;
+                                };
+                                stdout.queue(style::Print(format!("{}{}{}", selected_dot, arrow, item.value)))?;
+                                stdout.queue(style::SetForegroundColor(style::Color::Reset))?;
+                                stdout.queue(cursor::MoveTo(0, next_row))?;
+                            }
                         }
 
                         for col in 0..screen_cols {
-                            stdout.queue(cursor::MoveTo(col, screen_rows - search_rows))?;
+                            stdout.queue(cursor::MoveTo(col, screen_rows - screen.search_rows_count))?;
                             stdout.queue(style::Print("-"))?;
                         }
 
                         stdout.queue(cursor::MoveTo(0, screen_rows - 1))?;
-                        stdout.queue(style::Print(format!("{}", history.query)))?;
+                        stdout.queue(style::Print(format!("{}", screen.query)))?;
 
                         stdout.flush()?;
 
@@ -188,23 +239,26 @@ fn main() -> anyhow::Result<()>{
                                     if event.modifiers.contains(KeyModifiers::CONTROL) {
                                         match x {
                                             'c' => screen.quit = true,
-                                            'n' => history.move_selected_index(MoveDirection::Down),
-                                            'p' => history.move_selected_index(MoveDirection::Up),
-                                            'l' => screen.view = View::List,
+                                            'n' => screen.move_selected_index(MoveDirection::Down),
+                                            'p' => screen.move_selected_index(MoveDirection::Up),
+                                            'l' => screen.set_view(View::List),
                                             _ => {}
                                         }
                                     } else {
-                                        history.append_query(x);
+                                        screen.append_query(x);
+                                        screen.search(&store, visible_rows);
                                     }
                                 },
                                 KeyCode::Backspace => {
-                                    history.backspace_query();
+                                    screen.backspace_query();
+                                    screen.search(&store, visible_rows);
                                 },
                                 KeyCode::Enter => {
-                                    if let Some(command) = history.get_selection() {
+                                    let item = screen.get_selected().and_then(|x| store.get_history_item(*x));
+                                    if let Some(command) = item {
                                         if !command.selected {
-                                            store.create(&command.value)?;
-                                            history.add();
+                                            //store.create(&command.value)?;
+                                            //history.add();
                                         }
                                     }
                                 },
@@ -228,7 +282,11 @@ fn main() -> anyhow::Result<()>{
                                     if event.modifiers.contains(KeyModifiers::CONTROL) {
                                         match x {
                                             'c' => screen.quit = true,
-                                            's' => screen.view = View::Search, 
+                                            //'n' => history.move_selected_index(MoveDirection::Down),
+                                            //'p' => history.move_selected_index(MoveDirection::Up),
+                                            's' => {
+                                                screen.set_view(View::History);
+                                            },
                                             _ => {}
                                         }
                                     } 
