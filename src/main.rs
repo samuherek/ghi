@@ -20,7 +20,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    Add { value: Option<String> },
+    Add { value: String },
     Last,
     Flash
 }
@@ -182,13 +182,10 @@ fn main() -> anyhow::Result<()>{
 
     match &cli.command {
         Some(Commands::Add{value}) => {
-            if let Some(value) = value {
-                println!("add: {}", value);
-            } else {
-                let mut buff = String::new();
-                stdin().read_to_string(&mut buff).expect("could not read from stdin");
-                println!("stdin: {}", buff);
-            }
+            let mut store = Store::new();
+            store.init_database()?;
+            store.create_from_string(value)?;
+            println!("added: {}", value);
         },
         Some(Commands::Last) => {
             todo!();

@@ -191,7 +191,7 @@ impl Store {
         Ok(())
     }
 
-    fn init_database(&mut self) -> io::Result<()> {
+    pub fn init_database(&mut self) -> io::Result<()> {
         let store_file = self.dir.join(&self.file);
 
         if !self.dir.exists() {
@@ -227,6 +227,16 @@ impl Store {
 
     pub fn get_refs(&self, search: &str, limit: usize) -> Vec<usize> {
         self.cache.db.filter(search, limit)
+    }
+
+    pub fn create_from_string(&mut self, value: &String) -> io::Result<()> {
+        let value = value.trim(); 
+        if value.len() > 0 {
+            self.cache.db.add(value);
+            self.commit()?
+        }
+
+        Ok(())
     }
 
     pub fn create(&mut self, id: usize) -> io::Result<()> {
