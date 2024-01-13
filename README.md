@@ -5,12 +5,18 @@ The key ingredient to get you cooking in your code.
 
 
 ### TODO:
-[ ] remove items from the existing list.
+[ ] basic flashcard
+
+[ ] add command to add custom command from input
+
+[ ] ghi tail command for taking the last run command and save it
 
 [ ] create a configuration object that sets the storage path (I want to add it to synology to share across computers)
 
 
 ### DONE
+[-] remove items from the existing list.
+
 [-] remove duplicates from the history
 
 [-] hitting enter in the search list will add it in and out of the list.

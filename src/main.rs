@@ -4,7 +4,7 @@ mod debug;
 use clap::{Parser, Subcommand};
 use crossterm::{execute, style, cursor};
 use crossterm::terminal::{self, EnterAlternateScreen, Clear, ClearType, LeaveAlternateScreen};
-use std::io::{self, stdout, Write};
+use std::io::{self, stdin, stdout, Write, Read};
 use crossterm::QueueableCommand;
 use crossterm::event::{self, KeyCode, KeyModifiers, Event};
 use store::Store;
@@ -20,8 +20,9 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    Add,
-    List
+    Add { value: Option<String> },
+    Last,
+    Flash
 }
 
 #[derive(PartialEq)]
@@ -180,10 +181,19 @@ fn main() -> anyhow::Result<()>{
     let cli = Cli::parse();
 
     match &cli.command {
-        Some(Commands::Add) => {
-            todo!();
+        Some(Commands::Add{value}) => {
+            if let Some(value) = value {
+                println!("add: {}", value);
+            } else {
+                let mut buff = String::new();
+                stdin().read_to_string(&mut buff).expect("could not read from stdin");
+                println!("stdin: {}", buff);
+            }
         },
-        Some(Commands::List) => {
+        Some(Commands::Last) => {
+            todo!();
+        }
+        Some(Commands::Flash) => {
             todo!();
         },
         None => {

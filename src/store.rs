@@ -7,7 +7,6 @@ use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
-use super::debug;
 
 /// The directory name of the dotfolder where we store
 /// the databse by default.
