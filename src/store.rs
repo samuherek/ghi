@@ -103,6 +103,12 @@ impl HistoryItems {
         self.0.push(item)
     }
 
+    fn toggle(&mut self, id: usize) {
+        if let Some(item) = self.0.get_mut(id) {
+            item.selected = !item.selected;
+        }
+    }
+
     fn filter(&self, search: &str, limit: usize) -> Vec<usize> {
         let matcher = SkimMatcherV2::default();
         self.0.iter().enumerate().filter_map(|(idx, x)| {
@@ -217,8 +223,9 @@ impl Store {
         self.cache.db.filter(search, limit)
     }
 
-    pub fn create(&mut self, value: &str) -> io::Result<()> {
+    pub fn create(&mut self, id: &usize, value: &str) -> io::Result<()> {
         self.cache.db.add(value);
+        self.cache.history.toggle(*id);
         self.commit()?;
 
         Ok(())
@@ -227,10 +234,6 @@ impl Store {
     fn commit(&self) -> io::Result<()> {
         fs::write(&self.file, self.cache.db.to_string())?;
         Ok(())
-    }
-
-    pub fn all(&self) -> &Vec<DbItem> {
-       self.cache.db.all()
     }
 }
 

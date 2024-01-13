@@ -264,11 +264,11 @@ fn main() -> anyhow::Result<()>{
                                     screen.search(&store, visible_rows);
                                 },
                                 KeyCode::Enter => {
-                                    let item = screen.get_selected().and_then(|x| store.get_history_item(*x));
-                                    if let Some(command) = item {
-                                        if !command.selected {
-                                            //store.create(&command.value)?;
-                                            //history.add();
+                                    if let Some(id) = screen.get_selected() {
+                                        if let Some(command) = store.get_history_item(*id) {
+                                            if !command.selected {
+                                                store.create(id, &command.value.clone())?;
+                                            }
                                         }
                                     }
                                 },
