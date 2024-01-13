@@ -5,9 +5,6 @@ The key ingredient to get you cooking in your code.
 
 
 ### TODO:
-
-[ ] hitting enter in the search list will toggle it in and out of the list.
-
 [ ] remove items from the existing list.
 
 [ ] create a configuration object that sets the storage path (I want to add it to synology to share across computers)
@@ -15,6 +12,8 @@ The key ingredient to get you cooking in your code.
 
 ### DONE
 [-] remove duplicates from the history
+
+[-] hitting enter in the search list will add it in and out of the list.
 
 [-] add a list command to list all available commands and search through them
 

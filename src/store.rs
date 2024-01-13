@@ -7,6 +7,7 @@ use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
+use super::debug;
 
 /// The directory name of the dotfolder where we store
 /// the databse by default.
@@ -29,16 +30,18 @@ impl DbIndex {
         self.0.push(val.to_string())
     }
 
+    fn delete(&mut self, val: String) {
+        if let Some(idx) = self.0.iter().position(|x| x == &val) {
+            self.0.remove(idx);
+        }
+    }
+
     fn get(&self, idx: usize) -> Option<&DbItem> {
         self.0.get(idx)
     }
 
     pub fn has(&self, val: &str) -> bool {
         self.0.iter().any(|x| x == val)
-    }
-
-    fn all(&self) -> &Vec<DbItem> {
-        &self.0       
     }
 
     fn filter(&self, search: &str, limit: usize) -> Vec<usize> {
@@ -101,6 +104,10 @@ impl HistoryItems {
 
     fn push(&mut self, item: HistoryItem) {
         self.0.push(item)
+    }
+
+    fn position(&self, value: &str) -> Option<usize> {
+        self.0.iter().position(|x| x.value == value) 
     }
 
     fn toggle(&mut self, id: usize) {
@@ -223,10 +230,33 @@ impl Store {
         self.cache.db.filter(search, limit)
     }
 
-    pub fn create(&mut self, id: &usize, value: &str) -> io::Result<()> {
-        self.cache.db.add(value);
-        self.cache.history.toggle(*id);
-        self.commit()?;
+    pub fn create(&mut self, id: usize) -> io::Result<()> {
+        if let Some(command) = self.get_history_item(id) {
+            if !command.selected {
+                self.cache.db.add(&command.value.clone());
+                self.cache.history.toggle(id);
+                self.commit()?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn delete(&mut self, id: usize) -> io::Result<()> {
+        // TODO: there must be a better way to write this code :D 
+        let (cmd, idx) = if let Some(cmd) = self.get_item(id) {
+            (Some(cmd.clone()), self.cache.history.position(cmd.as_str()))
+        } else {
+            (None, None)
+        };
+
+        if let Some(cmd) = cmd {
+            if let Some(idx) = idx {
+                self.cache.history.toggle(idx);
+            }
+            self.cache.db.delete(cmd.to_string());
+            self.commit()?;
+        }
 
         Ok(())
     }

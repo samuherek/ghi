@@ -1,4 +1,5 @@
 mod store;
+mod debug;
 
 use clap::{Parser, Subcommand};
 use crossterm::{execute, style, cursor};
@@ -265,11 +266,7 @@ fn main() -> anyhow::Result<()>{
                                 },
                                 KeyCode::Enter => {
                                     if let Some(id) = screen.get_selected() {
-                                        if let Some(command) = store.get_history_item(*id) {
-                                            if !command.selected {
-                                                store.create(id, &command.value.clone())?;
-                                            }
-                                        }
+                                        store.create(*id)?;
                                     }
                                 },
                                 _ => {}
@@ -330,13 +327,10 @@ fn main() -> anyhow::Result<()>{
                                     screen.search(&store, visible_rows);
                                 },
                                 KeyCode::Enter => {
-                                    let _item = screen.get_selected().and_then(|x| store.get_item(*x));
-                                    //if let Some(command) = item {
-                                        //if !command {
-                                            //store.create(&command.value)?;
-                                            //history.add();
-                                        //}
-                                    //}
+                                    if let Some(id) = screen.get_selected() {
+                                        store.delete(*id)?;
+                                        screen.selected_idx = screen.selected_idx.saturating_sub(1);
+                                    }
                                 },
                                 _ => {}
                             }
