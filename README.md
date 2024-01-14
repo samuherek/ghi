@@ -9,7 +9,7 @@ The key ingredient to get you cooking in your code.
 
 [ ] add command to add custom command from input
 
-[ ] ghi tail command for taking the last run command and save it
+[ ] ghi tail command for taking the last run command and save it (for users of tmux and smilar, the `zsh_history` or `bash_history` does not work. Maybe we need to use the `fc -ln -1` command to fetch the last command)
 
 [ ] create a configuration object that sets the storage path (I want to add it to synology to share across computers)
 
