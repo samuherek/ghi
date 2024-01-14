@@ -188,7 +188,13 @@ fn main() -> anyhow::Result<()>{
             println!("added: {}", value);
         },
         Some(Commands::Last) => {
-            todo!();
+            let mut store = Store::new();
+            store.init_shell()?;
+            if let Some(item) = store.get_history_item(0) {
+                let value = item.value.clone();
+                store.create_from_string(&value)?;
+                println!("added: {}", value);
+            }
         }
         Some(Commands::Flash) => {
             todo!();

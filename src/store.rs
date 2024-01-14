@@ -168,7 +168,7 @@ impl Store {
         }
     }
 
-    fn init_shell(&mut self) -> anyhow::Result<()> {
+    pub fn init_shell(&mut self) -> anyhow::Result<()> {
         let shell_path = env::var("SHELL")?;
         let shell_name = shell_path.rsplit('/').next().unwrap_or("");
         let home_dir = dirs::home_dir().expect("Could not determine home dir");
