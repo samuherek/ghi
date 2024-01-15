@@ -1,7 +1,24 @@
-### Ghi
-The key ingredient to get you cooking in your code.
 
 ![Ghi](https://github.com/samuherek/ghi/assets/5614385/784fc006-d875-4300-b113-f0644db4da69)
+The key ingredient to get you cooking in your code.
+
+### How to use
+
+
+Add a new item to the history of things to save
+```sh
+$ ghi add "command" 
+```
+
+List all the items in the saved history
+```sh
+$ ghi list
+```
+
+Access interactive adding and removing from `bash_history` or `zsh_history`
+```sh
+$ ghi
+```
 
 
 ### TODO:
