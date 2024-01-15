@@ -8,6 +8,7 @@ use std::io::{self, stdin, stdout, Write, Read};
 use crossterm::QueueableCommand;
 use crossterm::event::{self, KeyCode, KeyModifiers, Event};
 use store::Store;
+use std::process::Command;
 
 #[derive(Parser)]
 #[command(author = "Sam Uherek <samuherekbiz@gmail.com>")]
@@ -20,8 +21,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    Add { value: String },
-    Last,
+    Add { value: Option<String> },
     Flash
 }
 
@@ -184,18 +184,21 @@ fn main() -> anyhow::Result<()>{
         Some(Commands::Add{value}) => {
             let mut store = Store::new();
             store.init_database()?;
-            store.create_from_string(value)?;
-            println!("added: {}", value);
-        },
-        Some(Commands::Last) => {
-            let mut store = Store::new();
-            store.init_shell()?;
-            if let Some(item) = store.get_history_item(0) {
-                let value = item.value.clone();
-                store.create_from_string(&value)?;
+
+            if let Some(value) = value {
+                store.create_from_string(value)?;
                 println!("added: {}", value);
+            } else {
+                let mut input = String::new();
+                match io::stdin().read_to_string(&mut input) {
+                    Ok(_) => {
+                        store.create_from_string(&input)?;
+                        println!("added from pipe: {}", input);
+                    }, 
+                    Err(err) => eprintln!("Error reading stdion: {}", err)
+                };
             }
-        }
+        },
         Some(Commands::Flash) => {
             todo!();
         },
