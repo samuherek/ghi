@@ -229,6 +229,19 @@ impl Store {
         self.cache.db.filter(search, limit)
     }
 
+    pub fn db_take(&self, limit: Option<usize>) -> Vec<&String> {
+        if let Some(limit) = limit{
+            if limit > 0 {
+               return self.cache.db.0.iter().take(limit).collect();
+            } else {
+                eprintln!("Err: limit has to be larger than 0");
+                return Vec::new();
+            }
+        } else {
+            return self.cache.db.0.iter().collect();
+        }
+    }
+
     pub fn create_from_string(&mut self, value: &String) -> io::Result<()> {
         let value = value.trim(); 
         if value.len() > 0 {

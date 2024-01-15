@@ -22,6 +22,7 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     Add { value: Option<String> },
+    List, 
     Flash
 }
 
@@ -198,6 +199,13 @@ fn main() -> anyhow::Result<()>{
                     Err(err) => eprintln!("Error reading stdion: {}", err)
                 };
             }
+        },
+        Some(Commands::List) => {
+            let mut store = Store::new();
+            store.init_database()?;
+            for item in store.db_take(None) {
+                println!("{}", item);
+            };
         },
         Some(Commands::Flash) => {
             todo!();
