@@ -24,15 +24,13 @@ $ ghi
 ### TODO:
 [ ] basic flashcard
 
-[ ] add command to add custom command from input
-
-[ ] ghi tail command for taking the last run command and save it (for users of tmux and smilar, the `zsh_history` or `bash_history` does not work. Maybe we need to use the `fc -ln -1` command to fetch the last command)
-
 [ ] create a configuration object that sets the storage path (I want to add it to synology to share across computers)
 
 
 ### DONE
 [-] remove items from the existing list.
+
+[-] add command to add custom command from input
 
 [-] remove duplicates from the history
 
@@ -47,6 +45,13 @@ $ ghi
 [-] enter submits the comand and saves it into .config files
 
 [-] add the build binary to my paths so I can start using it on the laptop
+
+
+### Not applicable
+
+[ ] ghi tail command for taking the last run command and save it (for users of tmux and smilar, the `zsh_history` or `bash_history` does not work. Maybe we need to use the `fc -ln -1` command to fetch the last command)
+- this is no longer relevant. It turns out there is too many behaviors and it's hard to do this right. Now it only supports the "ghi add" that adds as text or you can pipe. 
+
 
 --- 
 

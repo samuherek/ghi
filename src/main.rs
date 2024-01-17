@@ -2,6 +2,7 @@ mod store;
 mod debug;
 
 use clap::{Parser, Subcommand};
+use rand::seq::SliceRandom;
 use crossterm::{execute, style, cursor};
 use crossterm::terminal::{self, EnterAlternateScreen, Clear, ClearType, LeaveAlternateScreen};
 use std::io::{self, stdin, stdout, Write, Read};
@@ -208,7 +209,16 @@ fn main() -> anyhow::Result<()>{
             };
         },
         Some(Commands::Flash) => {
-            todo!();
+            let mut store = Store::new();
+            store.init_database()?;
+
+            let list = store.db_take(None);
+            if let Some(val) = list.choose(&mut rand::thread_rng()) {
+                println!("{val}");
+            }  else {
+                eprintln!("The list is empty");
+            }
+
         },
         None => {
             let mut store = Store::new();
