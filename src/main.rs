@@ -244,7 +244,42 @@ impl Drop for ScreenTmux {
     }
 }
 
+#[derive(Debug)]
+enum Arg {
+    String(String),
+    Int(usize)
+}
 
+#[derive(Debug)]
+enum Token { 
+    Command(String),
+    Flag(String),
+    Argument(Arg),
+}
+
+fn lex(input: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let parts = input.split_whitespace().collect::<Vec<_>>();
+
+    for part in parts {
+        if part.starts_with('-') {
+            tokens.push(Token::Flag(part.to_string()));
+        } else if part.starts_with('<') && part.ends_with('>') {
+            let val = &part[1..part.len().saturating_sub(1)];
+            let num = val.parse::<usize>().ok();
+
+            if let Some(num) = num {
+                tokens.push(Token::Argument(Arg::Int(num)));
+            } else {
+                tokens.push(Token::Argument(Arg::String(val.to_string())));
+            }
+        } else {
+            tokens.push(Token::Command(part.to_string()));
+        }
+    }
+
+    return tokens;
+}
 
 fn main() -> anyhow::Result<()>{
     let cli = Cli::parse();
@@ -295,71 +330,76 @@ fn main() -> anyhow::Result<()>{
             };
         },
         Some(Commands::Tmux) => {
-            let mut screen = ScreenTmux::enable()?;
-            let mut stdout = stdout();
-            let (screen_cols, screen_rows) = terminal::size()?;
-
-
             let data = fs::read_to_string(PathBuf::from("input.json")).unwrap();
             let course: Vec<Course> = serde_json::from_str(&data)?;
             let quest = course.into_iter().nth(0).unwrap();
-            screen.quest = quest.description;
 
-            while !screen.quit {
-                let _ = screen.reset(&mut stdout)?;
+            let l = lex(&quest.command);
+            println!("tokens:: {:?}", l);
 
-                stdout.queue(cursor::MoveTo(0, 0))?;
-                stdout.queue(style::Print(&screen.quest))?;
+            // let mut screen = ScreenTmux::enable()?;
+            // let mut stdout = stdout();
+            // let (screen_cols, screen_rows) = terminal::size()?;
+            //
+            // screen.quest = quest.description;
 
-                for (i, item) in screen.text.iter().enumerate() {
-                    stdout.queue(cursor::MoveTo(0, i as u16 + 2))?;
-                    stdout.queue(style::Print(item))?;
-                }
+            
 
-                for col in 0..screen_cols {
-                    stdout.queue(cursor::MoveTo(col, screen_rows - 2))?;
-                    stdout.queue(style::Print("-"))?;
-                }
-
-                stdout.queue(cursor::MoveTo(0, screen_rows - 1))?;
-                stdout.queue(style::Print(format!("{}", screen.input)))?;
-
-                stdout.flush()?;
-
-                if let Event::Key(event) = event::read()? {
-                    match event.code {
-                        KeyCode::Char(x) => {
-                            if event.modifiers.contains(KeyModifiers::CONTROL) {
-                                match x {
-                                    'c' => screen.quit = true,
-                                    _ => {}
-                                }
-                            } else {
-                                screen.append_input(x);
-                            }
-                        },
-                        KeyCode::Backspace => {
-                            screen.backspace_input();
-                        },
-                        KeyCode::Enter => {
-                            screen.text.push("submitted".to_string());
-                            
-                            let (cmd, args) = screen.input.split_once(" ").unwrap_or(("", ""));
-                            if cmd.len() > 0 {
-                                screen.text.push(cmd.to_string());
-                                screen.text.push(args.to_string());
-                            }
-                                
-                            //{
-                            //        "command": "new-session -s <string>",
-                            //        "description": "Create a new session.",
-                            //        "tag": "session"
-                            //    },
-                        },
-                        _ => {}
-                    }
-                }
-            }
+            // while !screen.quit {
+            //     let _ = screen.reset(&mut stdout)?;
+            //
+            //     stdout.queue(cursor::MoveTo(0, 0))?;
+            //     stdout.queue(style::Print(&screen.quest))?;
+            //
+            //     for (i, item) in screen.text.iter().enumerate() {
+            //         stdout.queue(cursor::MoveTo(0, i as u16 + 2))?;
+            //         stdout.queue(style::Print(item))?;
+            //     }
+            //
+            //     for col in 0..screen_cols {
+            //         stdout.queue(cursor::MoveTo(col, screen_rows - 2))?;
+            //         stdout.queue(style::Print("-"))?;
+            //     }
+            //
+            //     stdout.queue(cursor::MoveTo(0, screen_rows - 1))?;
+            //     stdout.queue(style::Print(format!("{}", screen.input)))?;
+            //
+            //     stdout.flush()?;
+            //
+            //     if let Event::Key(event) = event::read()? {
+            //         match event.code {
+            //             KeyCode::Char(x) => {
+            //                 if event.modifiers.contains(KeyModifiers::CONTROL) {
+            //                     match x {
+            //                         'c' => screen.quit = true,
+            //                         _ => {}
+            //                     }
+            //                 } else {
+            //                     screen.append_input(x);
+            //                 }
+            //             },
+            //             KeyCode::Backspace => {
+            //                 screen.backspace_input();
+            //             },
+            //             KeyCode::Enter => {
+            //                 screen.text.push("submitted".to_string());
+            //                 
+            //                 let (cmd, args) = screen.input.split_once(" ").unwrap_or(("", ""));
+            //                 if cmd.len() > 0 {
+            //                     screen.text.push(cmd.to_string());
+            //                     screen.text.push(args.to_string());
+            //                 }
+            //                     
+            //                 //{
+            //                 //        "command": "new-session -s <string>",
+            //                 //        "description": "Create a new session.",
+            //                 //        "tag": "session"
+            //                 //    },
+            //             },
+            //             _ => {}
+            //         }
+            //     }
+            // }
         },
         Some(Commands::Flash) => {
             let mut store = Store::new();
