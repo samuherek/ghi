@@ -5,11 +5,16 @@ use clap::{Parser, Subcommand};
 use rand::seq::SliceRandom;
 use crossterm::{execute, style, cursor};
 use crossterm::terminal::{self, EnterAlternateScreen, Clear, ClearType, LeaveAlternateScreen};
-use std::io::{self, stdin, stdout, Write, Read};
+use std::io::{self, stdout, Write, Read};
+use std::path::PathBuf;
+use std::{fs, env};
 use crossterm::QueueableCommand;
 use crossterm::event::{self, KeyCode, KeyModifiers, Event};
 use store::Store;
+use tempfile::NamedTempFile;
 use std::process::Command;
+use serde::Deserialize;
+use serde_json;
 
 #[derive(Parser)]
 #[command(author = "Sam Uherek <samuherekbiz@gmail.com>")]
@@ -24,7 +29,8 @@ pub struct Cli {
 pub enum Commands {
     Add { value: Option<String> },
     List, 
-    Flash
+    Flash,
+    Tmux
 }
 
 #[derive(PartialEq)]
@@ -179,6 +185,67 @@ impl Drop for ScreenState {
     }
 }
 
+
+#[derive(Deserialize)]
+struct Course {
+    command: String, 
+    description: String,
+    tag: String
+}
+
+struct ScreenTmux {
+    input: String,
+    quest: String,
+    answer: String,
+    text: Vec<String>,
+    quit: bool,
+}
+
+impl ScreenTmux {
+    fn enable() -> io::Result<Self> {
+        execute!(stdout(), EnterAlternateScreen)?;
+        terminal::enable_raw_mode()?;
+        Ok(Self {
+            input: String::new(),
+            quest: String::new(),
+            answer: String::new(),
+            text: Vec::new(),
+            quit: false,
+        })
+    }
+
+    pub fn append_input(&mut self, x: char) {
+        self.input.push(x);
+    }
+
+    pub fn backspace_input(&mut self) {
+        self.input.pop();
+    }
+
+    fn reset(&self, qc: &mut impl Write) -> io::Result<()> {
+        qc.queue(Clear(ClearType::All))?;
+        qc.queue(cursor::MoveTo(0, 0))?;
+        qc.queue(cursor::Hide)?;
+
+        qc.flush()?;
+
+        Ok(())
+    }
+}
+
+impl Drop for ScreenTmux {
+    fn drop(&mut self) {
+        let _ = terminal::disable_raw_mode().map_err(|err| {
+            eprintln!("ERROR: disable raw mode: {err}")
+        });
+        let _ = execute!(stdout(), LeaveAlternateScreen).map_err(|err| {
+            eprintln!("ERROR: leave alternate screen: {err}")
+        });
+    }
+}
+
+
+
 fn main() -> anyhow::Result<()>{
     let cli = Cli::parse();
 
@@ -186,20 +253,39 @@ fn main() -> anyhow::Result<()>{
         Some(Commands::Add{value}) => {
             let mut store = Store::new();
             store.init_database()?;
+            let mut input = String::new();
 
             if let Some(value) = value {
                 store.create_from_string(value)?;
-                println!("added: {}", value);
+                input = value.clone();
             } else {
-                let mut input = String::new();
-                match io::stdin().read_to_string(&mut input) {
+                let mut buf = String::new();
+                match io::stdin().read_to_string(&mut buf) {
                     Ok(_) => {
-                        store.create_from_string(&input)?;
-                        println!("added from pipe: {}", input);
+                        store.create_from_string(&buf)?;
+                        input = buf;
                     }, 
                     Err(err) => eprintln!("Error reading stdion: {}", err)
                 };
-            }
+            };
+
+            let file = NamedTempFile::new()?;
+            let path = file.path();
+
+            let path2 = file.path().to_str().unwrap().to_string();
+            println!("path, {:?}", path);
+            println!("path2, {:?}", path2);
+
+            let editor = env::var("EDITOR")?;
+
+            Command::new(editor)
+                .args(path)
+                .status()?;
+
+            let i = fs::read_to_string(path)?;
+            println!("User input: {}", i);
+
+            println!("added: {:?}", input);
         },
         Some(Commands::List) => {
             let mut store = Store::new();
@@ -207,6 +293,73 @@ fn main() -> anyhow::Result<()>{
             for item in store.db_take(None) {
                 println!("{}", item);
             };
+        },
+        Some(Commands::Tmux) => {
+            let mut screen = ScreenTmux::enable()?;
+            let mut stdout = stdout();
+            let (screen_cols, screen_rows) = terminal::size()?;
+
+
+            let data = fs::read_to_string(PathBuf::from("input.json")).unwrap();
+            let course: Vec<Course> = serde_json::from_str(&data)?;
+            let quest = course.into_iter().nth(0).unwrap();
+            screen.quest = quest.description;
+
+            while !screen.quit {
+                let _ = screen.reset(&mut stdout)?;
+
+                stdout.queue(cursor::MoveTo(0, 0))?;
+                stdout.queue(style::Print(&screen.quest))?;
+
+                for (i, item) in screen.text.iter().enumerate() {
+                    stdout.queue(cursor::MoveTo(0, i as u16 + 2))?;
+                    stdout.queue(style::Print(item))?;
+                }
+
+                for col in 0..screen_cols {
+                    stdout.queue(cursor::MoveTo(col, screen_rows - 2))?;
+                    stdout.queue(style::Print("-"))?;
+                }
+
+                stdout.queue(cursor::MoveTo(0, screen_rows - 1))?;
+                stdout.queue(style::Print(format!("{}", screen.input)))?;
+
+                stdout.flush()?;
+
+                if let Event::Key(event) = event::read()? {
+                    match event.code {
+                        KeyCode::Char(x) => {
+                            if event.modifiers.contains(KeyModifiers::CONTROL) {
+                                match x {
+                                    'c' => screen.quit = true,
+                                    _ => {}
+                                }
+                            } else {
+                                screen.append_input(x);
+                            }
+                        },
+                        KeyCode::Backspace => {
+                            screen.backspace_input();
+                        },
+                        KeyCode::Enter => {
+                            screen.text.push("submitted".to_string());
+                            
+                            let (cmd, args) = screen.input.split_once(" ").unwrap_or(("", ""));
+                            if cmd.len() > 0 {
+                                screen.text.push(cmd.to_string());
+                                screen.text.push(args.to_string());
+                            }
+                                
+                            //{
+                            //        "command": "new-session -s <string>",
+                            //        "description": "Create a new session.",
+                            //        "tag": "session"
+                            //    },
+                        },
+                        _ => {}
+                    }
+                }
+            }
         },
         Some(Commands::Flash) => {
             let mut store = Store::new();

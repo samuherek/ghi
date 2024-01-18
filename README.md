@@ -22,6 +22,9 @@ $ ghi
 
 
 ### TODO:
+
+[ ] interactive add to add some context to the command to save
+
 [ ] basic flashcard
 
 [ ] create a configuration object that sets the storage path (I want to add it to synology to share across computers)

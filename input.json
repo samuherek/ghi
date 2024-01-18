@@ -1,0 +1,107 @@
+[
+    {
+        "command": "new-session -s <string>",
+        "description": "Create a new session.",
+        "tag": "session"
+    },
+    {
+        "command": "attach-session -t <string>",
+        "description": "Attach to an existing session.",
+        "tag": "session"
+    },
+    {
+        "command": "detach-client",
+        "description": "Detach from the current session.",
+        "tag": "session"
+    },
+    {
+        "command": "kill-session -t <string>",
+        "description": "Terminate a session.",
+        "tag": "session"
+    },
+    {
+        "command": "list-sessions",
+        "description": "List all sessions.",
+        "tag": "session"
+    },
+    {
+        "command": "new-window -n <string>",
+        "description": "Create a new window.",
+        "tag": "window"
+    },
+    {
+        "command": "select-window -t <string>",
+        "description": "Select a window.",
+        "tag": "window"
+    },
+    {
+        "command": "rename-window <string>",
+        "description": "Rename the current window.",
+        "tag": "window"
+    },
+    {
+        "command": "kill-window",
+        "description": "Close the current window.",
+        "tag": "window"
+    },
+    {
+        "command": "list-windows",
+        "description": "List all windows in the current session.",
+        "tag": "window"
+    },
+    {
+        "command": "split-window -h",
+        "description": "Split the current pane horizontally.",
+        "tag": "pane"
+    },
+    {
+        "command": "split-window -v",
+        "description": "Split the current pane vertically.",
+        "tag": "pane"
+    },
+    {
+        "command": "select-pane -D",
+        "description": "Select a pane. (Example: Move to the pane below)",
+        "tag": "pane"
+    },
+    {
+        "command": "resize-pane -D <int>",
+        "description": "Resize the current pane. (Example: Resize down by 10 cells)",
+        "tag": "pane"
+    },
+    {
+        "command": "kill-pane",
+        "description": "Close the current pane.",
+        "tag": "pane"
+    },
+    {
+        "command": "swap-pane -s <int> -t <int>",
+        "description": "Swap the current pane with another.",
+        "tag": "pane"
+    },
+    {
+        "command": "bind-key <char> <cmd>",
+        "description": "Bind a key to a tmux command.",
+        "tag": "cmd"
+    },
+    {
+        "command": "set-option -g <key> <value>",
+        "description": "Set a tmux option.",
+        "tag": "cmd"
+    },
+    {
+        "command": "show-options -g",
+        "description": "Show current tmux options.",
+        "tag": "cmd"
+    },
+    {
+        "command": "source-file <string>",
+        "description": "Reload tmux configuration file.",
+        "tag": "cmd"
+    },
+    {
+        "command": "display-message <string>",
+        "description": "Display a message in the status line.",
+        "tag": "cmd"
+    }
+]
