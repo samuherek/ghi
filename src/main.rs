@@ -1,5 +1,6 @@
 mod store;
 mod debug;
+mod lexer;
 
 use clap::{Parser, Subcommand};
 use rand::seq::SliceRandom;
