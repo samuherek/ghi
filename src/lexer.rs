@@ -7,6 +7,7 @@ enum Token {
     RAr,
     FlagShort,
     FlagLong,
+    Multiple,
     Or,
     Str(String),
     Illegal,
@@ -56,6 +57,12 @@ impl<'a> CmdLexer<'a> {
         }
     }
 
+    fn consume_dots(&mut self) {
+        while self.ch == '.' {
+            self.read_char();
+        }
+    }
+
     fn next_token(&mut self) -> Token {
         self.skip_whitespace();        
 
@@ -67,14 +74,21 @@ impl<'a> CmdLexer<'a> {
             '-' => {
                 if self.peak_char() == '-' {
                     self.read_char();
-                    self.read_char();
-                    return Token::FlagLong;
+                    Token::FlagLong
+                } else {
+                    Token::FlagShort
                 }
-                Token::FlagShort
+            },
+            '.' => {
+                self.consume_dots();
+                return Token::Multiple;
             },
             '|' => Token::Or,
             'a'..='z' | 'A'..='Z' => {
                 let value = self.read_str(); 
+                // TODO: might need to use "peak" instead of "read"
+                // so that we don't have to "return" which is inconsistent
+                // with the rest of the arms.
                 return Token::Str(value)
             },
             '0' => Token::Eof,
@@ -417,6 +431,29 @@ mod tests {
            super::Token::LAr,
            super::Token::Str(String::from("commit")),
            super::Token::RAr,
+           super::Token::Eof
+       ];
+       let result = super::lex(&input);
+       assert_eq!(result, exp);
+   }
+
+   #[test]
+   fn multiple_dot_inputs() {
+        let input = "git add [<file>... | <directory>...]";
+       let exp = vec![
+           super::Token::Str(String::from("git")),
+           super::Token::Str(String::from("add")),
+           super::Token::LSq,
+           super::Token::LAr,
+           super::Token::Str(String::from("file")),
+           super::Token::RAr,
+           super::Token::Multiple,
+           super::Token::Or,
+           super::Token::LAr,
+           super::Token::Str(String::from("directory")),
+           super::Token::RAr,
+           super::Token::Multiple,
+           super::Token::RSq,
            super::Token::Eof
        ];
        let result = super::lex(&input);
