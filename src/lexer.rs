@@ -6,6 +6,7 @@ enum Token {
     LAr, 
     RAr,
     Flag,
+    Or,
     Str(String),
     Illegal,
     Eof,
@@ -67,6 +68,7 @@ impl<'a> CmdLexer<'a> {
             '<' => Token::LAr,
             '>' => Token::RAr,
             '-' => Token::Flag,
+            '|' => Token::Or,
             'a'..='z' | 'A'..='Z' => {
                 let value = self.read_str(); 
                 return Token::Str(value);
@@ -152,9 +154,7 @@ mod tests {
             super::Token::Str(String::from("f")),
             super::Token::Eof,
         ];
-
         let result = super::lex(&input);
-
         assert_eq!(result, exp);
     }
 
@@ -171,9 +171,7 @@ mod tests {
             super::Token::LSq,
             super::Token::Eof,
         ];
-
         let result = super::lex(&input);
-
         assert_eq!(result, exp);
     }
 
@@ -190,9 +188,156 @@ mod tests {
             super::Token::RSq,
             super::Token::Eof,
         ];
-
         let result = super::lex(&input);
+        assert_eq!(result, exp);
+    }
 
+    #[test]
+    fn cmd1() {
+        let input = "[-t <current-name>] <new-name>";
+        let exp = vec![
+            super::Token::LSq,
+            super::Token::Flag,
+            super::Token::Str(String::from("t")),
+            super::Token::LAr,
+            super::Token::Str(String::from("current-name")),
+            super::Token::RAr,
+            super::Token::RSq,
+            super::Token::LAr,
+            super::Token::Str(String::from("new-name")),
+            super::Token::RAr, 
+            super::Token::Eof,
+        ];
+        let result = super::lex(&input);
+        assert_eq!(result, exp);
+    }
+
+    #[test]
+    fn cmd2() {
+        let input = "[-c <target-client>] [-t <target-session>]";
+        let exp = vec![
+            super::Token::LSq,
+            super::Token::Flag,
+            super::Token::Str(String::from("c")),
+            super::Token::LAr,
+            super::Token::Str(String::from("target-client")),
+            super::Token::RAr,
+            super::Token::RSq,
+            super::Token::LSq,
+            super::Token::Flag,
+            super::Token::Str(String::from("t")),
+            super::Token::LAr,
+            super::Token::Str(String::from("target-session")),
+            super::Token::RAr,
+            super::Token::RSq,
+            super::Token::Eof,
+        ];
+        let result = super::lex(&input);
+        assert_eq!(result, exp);
+    }
+
+    #[test]
+    fn cmd3() {
+        let input = "[-b] [-t <target-pane>] <shell-command>";
+        let exp = vec![
+            super::Token::LSq,
+            super::Token::Flag,
+            super::Token::Str(String::from("b")),
+            super::Token::RSq,
+            super::Token::LSq,
+            super::Token::Flag,
+            super::Token::Str(String::from("t")),
+            super::Token::LAr,
+            super::Token::Str(String::from("target-pane")),
+            super::Token::RAr,
+            super::Token::RSq,
+            super::Token::LAr,
+            super::Token::Str(String::from("shell-command")),
+            super::Token::RAr,
+            super::Token::Eof,
+        ];
+        let result = super::lex(&input);
+        assert_eq!(result, exp);
+    }
+
+    #[test]
+    fn cmd4() {
+        let input = "[-s <session-name>] [-n <window-name>] [command]";
+        let exp = vec![
+            super::Token::LSq,
+            super::Token::Flag,
+            super::Token::Str(String::from("s")),
+            super::Token::LAr,
+            super::Token::Str(String::from("session-name")),
+            super::Token::RAr,
+            super::Token::RSq,
+            super::Token::LSq,
+            super::Token::Flag,
+            super::Token::Str(String::from("n")),
+            super::Token::LAr,
+            super::Token::Str(String::from("window-name")),
+            super::Token::RAr,
+            super::Token::RSq,
+            super::Token::LSq,
+            super::Token::Str(String::from("command")),
+            super::Token::RSq,
+            super::Token::Eof,
+        ];
+        let result = super::lex(&input);
+        assert_eq!(result, exp);
+    }
+
+    #[test]
+    fn cmd5() {
+        let input = "[-b] [-t <target-pane>] <shell-command> <command> [else-command]";
+        let exp = vec![
+            super::Token::LSq,
+            super::Token::Flag,
+            super::Token::Str(String::from("b")),
+            super::Token::RSq,
+            super::Token::LSq,
+            super::Token::Flag,
+            super::Token::Str(String::from("t")),
+            super::Token::LAr,
+            super::Token::Str(String::from("target-pane")),
+            super::Token::RAr,
+            super::Token::RSq,
+            super::Token::LAr,
+            super::Token::Str(String::from("shell-command")),
+            super::Token::RAr,
+            super::Token::LAr,
+            super::Token::Str(String::from("command")),
+            super::Token::RAr,
+            super::Token::LSq,
+            super::Token::Str(String::from("else-command")),
+            super::Token::RSq,
+            super::Token::Eof,
+        ];
+        let result = super::lex(&input);
+        assert_eq!(result, exp);
+    }
+
+    #[test]
+    fn flag_with_or() {
+        let input = "[-D | -U] [-t <target-pane>]";
+        let exp = vec![
+            super::Token::LSq,
+            super::Token::Flag,
+            super::Token::Str(String::from("D")),
+            super::Token::Or,
+            super::Token::Flag,
+            super::Token::Str(String::from("U")),
+            super::Token::RSq,
+            super::Token::LSq,
+            super::Token::Flag,
+            super::Token::Str(String::from("t")),
+            super::Token::LAr,
+            super::Token::Str(String::from("target-pane")),
+            super::Token::RAr,
+            super::Token::RSq,
+            super::Token::Eof,
+        ];
+        let result = super::lex(&input);
         assert_eq!(result, exp);
     }
 }
