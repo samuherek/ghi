@@ -85,9 +85,12 @@ impl<'a> CmdLexer<'a> {
     }
 }
 
+// TODO: implement the possibility to have numbers inside a string 
+// that does not start with a number.
+// Currently, it breaks, because we use '0' as an EOF enum
 fn is_str_letter(input: char) -> bool {
     match input {
-        'a'..='z' | 'A'..='Z' | '-' | '_' => true,
+        'a'..='z' | 'A'..='Z' | '-' | '_'  => true,
         _ => false
     }
 }
@@ -398,19 +401,25 @@ mod tests {
         assert_eq!(result, exp);
     }
     
-   // #[test]
-   // fn command_and_subcommand() {
-   //     let input = "git reset [--hard | --soft] <commit>";
-   //     let exp = vec![
-   //         super::Token::LSq,
-   //         super::Token::Flag,
-   //         super::Token::Str(String::from("b")),
-   //         super::Token::LAr,
-   //         super::Token::Str(String::from("branch")),
-   //         super::Token::RAr,
-   //         super::Token::RSq,
-   //     ];
-   //     let result = super::lex(&input);
-   //     assert_eq!(result, exp);
-   // }
+   #[test]
+   fn command_and_subcommand() {
+       let input = "git reset [--hard | --soft] <commit>";
+       let exp = vec![
+           super::Token::Str(String::from("git")),
+           super::Token::Str(String::from("reset")),
+           super::Token::LSq,
+           super::Token::FlagLong,
+           super::Token::Str(String::from("hard")),
+           super::Token::Or,
+           super::Token::FlagLong,
+           super::Token::Str(String::from("soft")),
+           super::Token::RSq,
+           super::Token::LAr,
+           super::Token::Str(String::from("commit")),
+           super::Token::RAr,
+           super::Token::Eof
+       ];
+       let result = super::lex(&input);
+       assert_eq!(result, exp);
+   }
 }
