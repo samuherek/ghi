@@ -5,8 +5,8 @@ pub enum Token {
     RSq,
     LAr, 
     RAr,
-    FlagShort,
-    FlagLong,
+    FlagShort(String),
+    FlagLong(String),
     Multiple,
     Or,
     Str(String),
@@ -74,9 +74,13 @@ impl<'a> CmdLexer<'a> {
             '-' => {
                 if self.peak_char() == '-' {
                     self.read_char();
-                    Token::FlagLong
+                    self.read_char();
+                    let value = self.read_str(); 
+                    return Token::FlagLong(value)
                 } else {
-                    Token::FlagShort
+                    self.read_char();
+                    let value = self.read_str(); 
+                    return Token::FlagShort(value)
                 }
             },
             '.' => {
@@ -188,8 +192,7 @@ mod tests {
             super::Token::RSq,
             super::Token::LAr,
             super::Token::RAr,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("fa")),
+            super::Token::FlagShort(String::from("fa")),
             super::Token::LSq,
             super::Token::Eof,
         ];
@@ -202,8 +205,7 @@ mod tests {
         let input = "[-t <target-session>]";
         let exp = vec![
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("t")),
+            super::Token::FlagShort(String::from("t")),
             super::Token::LAr,
             super::Token::Str(String::from("target-session")),
             super::Token::RAr,
@@ -219,8 +221,7 @@ mod tests {
         let input = "[-t <current-name>] <new-name>";
         let exp = vec![
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("t")),
+            super::Token::FlagShort(String::from("t")),
             super::Token::LAr,
             super::Token::Str(String::from("current-name")),
             super::Token::RAr,
@@ -239,15 +240,13 @@ mod tests {
         let input = "[-c <target-client>] [-t <target-session>]";
         let exp = vec![
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("c")),
+            super::Token::FlagShort(String::from("c")),
             super::Token::LAr,
             super::Token::Str(String::from("target-client")),
             super::Token::RAr,
             super::Token::RSq,
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("t")),
+            super::Token::FlagShort(String::from("t")),
             super::Token::LAr,
             super::Token::Str(String::from("target-session")),
             super::Token::RAr,
@@ -263,12 +262,10 @@ mod tests {
         let input = "[-b] [-t <target-pane>] <shell-command>";
         let exp = vec![
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("b")),
+            super::Token::FlagShort(String::from("b")),
             super::Token::RSq,
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("t")),
+            super::Token::FlagShort(String::from("t")),
             super::Token::LAr,
             super::Token::Str(String::from("target-pane")),
             super::Token::RAr,
@@ -287,15 +284,13 @@ mod tests {
         let input = "[-s <session-name>] [-n <window-name>] [command]";
         let exp = vec![
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("s")),
+            super::Token::FlagShort(String::from("s")),
             super::Token::LAr,
             super::Token::Str(String::from("session-name")),
             super::Token::RAr,
             super::Token::RSq,
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("n")),
+            super::Token::FlagShort(String::from("n")),
             super::Token::LAr,
             super::Token::Str(String::from("window-name")),
             super::Token::RAr,
@@ -314,12 +309,10 @@ mod tests {
         let input = "[-b] [-t <target-pane>] <shell-command> <command> [else-command]";
         let exp = vec![
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("b")),
+            super::Token::FlagShort(String::from("b")),
             super::Token::RSq,
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("t")),
+            super::Token::FlagShort(String::from("t")),
             super::Token::LAr,
             super::Token::Str(String::from("target-pane")),
             super::Token::RAr,
@@ -344,15 +337,12 @@ mod tests {
         let input = "[-D | -U] [-t <target-pane>]";
         let exp = vec![
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("D")),
+            super::Token::FlagShort(String::from("D")),
             super::Token::Or,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("U")),
+            super::Token::FlagShort(String::from("U")),
             super::Token::RSq,
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("t")),
+            super::Token::FlagShort(String::from("t")),
             super::Token::LAr,
             super::Token::Str(String::from("target-pane")),
             super::Token::RAr,
@@ -368,15 +358,13 @@ mod tests {
         let input = "[-b <branch>] [--depth <depth>] <repository> [<directory>]";
         let exp = vec![
             super::Token::LSq,
-            super::Token::FlagShort,
-            super::Token::Str(String::from("b")),
+            super::Token::FlagShort(String::from("b")),
             super::Token::LAr,
             super::Token::Str(String::from("branch")),
             super::Token::RAr,
             super::Token::RSq,
             super::Token::LSq,
-            super::Token::FlagLong,
-            super::Token::Str(String::from("depth")),
+            super::Token::FlagLong(String::from("depth")),
             super::Token::LAr,
             super::Token::Str(String::from("depth")),
             super::Token::RAr,
@@ -400,11 +388,9 @@ mod tests {
         let input = "[--hard | --soft] <commit>";
         let exp = vec![
             super::Token::LSq,
-            super::Token::FlagLong,
-            super::Token::Str(String::from("hard")),
+            super::Token::FlagLong(String::from("hard")),
             super::Token::Or,
-            super::Token::FlagLong,
-            super::Token::Str(String::from("soft")),
+            super::Token::FlagLong(String::from("soft")),
             super::Token::RSq,
             super::Token::LAr,
             super::Token::Str(String::from("commit")),
@@ -422,11 +408,9 @@ mod tests {
            super::Token::Str(String::from("git")),
            super::Token::Str(String::from("reset")),
            super::Token::LSq,
-           super::Token::FlagLong,
-           super::Token::Str(String::from("hard")),
+           super::Token::FlagLong(String::from("hard")),
            super::Token::Or,
-           super::Token::FlagLong,
-           super::Token::Str(String::from("soft")),
+           super::Token::FlagLong(String::from("soft")),
            super::Token::RSq,
            super::Token::LAr,
            super::Token::Str(String::from("commit")),

@@ -10,6 +10,10 @@ enum CmdPart {
     },
     Required {
         blocks: Vec<CmdPart>
+    },
+    Flag {
+        name: String,
+        input: Vec<CmdPart>
     }
 }
 
@@ -221,5 +225,24 @@ mod tests {
                 blocks: vec![CmdPart::Input(String::from("directory"))]
             },
         ]);
+    }
+
+    #[test]
+    fn parse_flag() {
+        let parser = CmdParser::new(vec![
+            Token::FlagShort(String::from("f")),
+            Token::FlagShort(String::from("c")),
+        ]).parse_cmd();
+
+        // assert_eq!(parser, vec![
+        //     CmdPart::Flag{
+        //         name: String::from("f"),
+        //         input: vec![]
+        //     },
+        //     CmdPart::Flag{
+        //         name: String::from("c")
+        //         input: vec![]
+        //     },
+        // ]);
     }
 }
