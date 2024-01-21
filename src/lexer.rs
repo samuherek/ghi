@@ -1,6 +1,6 @@
 
-#[derive(Debug, PartialEq)]
-enum Token {
+#[derive(Debug, PartialEq, Clone)]
+pub enum Token {
     LSq,
     RSq,
     LAr, 
@@ -439,7 +439,7 @@ mod tests {
 
    #[test]
    fn multiple_dot_inputs() {
-        let input = "git add [<file>... | <directory>...]";
+       let input = "git add [<file>... | <directory>...]";
        let exp = vec![
            super::Token::Str(String::from("git")),
            super::Token::Str(String::from("add")),
