@@ -4,7 +4,7 @@ type Lexer = Vec<Token>;
 
 #[derive(Debug, PartialEq)]
 enum CmdPart {
-    Input(String),
+    Argument(String),
     Optional {
         blocks: Vec<CmdPart>
     },
@@ -50,7 +50,7 @@ impl CmdParser {
 
     fn parse_block(&mut self) -> CmdPart {
         match &self.curr_token {
-            Some(Token::Str(val)) => CmdPart::Input(val.clone()),
+            Some(Token::Str(val)) => CmdPart::Argument(val.clone()),
             Some(Token::FlagShort(val)) => CmdPart::Flag{ values: val.chars().map(|x| x.to_string()).collect() },
             Some(Token::FlagLong(val)) => CmdPart::Flag{ values: vec![val.clone()] },
             Some(Token::LAr) => {
@@ -143,7 +143,7 @@ mod tests {
         ]).parse_cmd();
 
         assert_eq!(parser, vec![
-            CmdPart::Input(String::from("git"))
+            CmdPart::Argument(String::from("git"))
         ]);
    }
 
@@ -154,7 +154,7 @@ mod tests {
         ]).parse_cmd();
 
         assert_eq!(parser, vec![
-            CmdPart::Input(String::from("git"))
+            CmdPart::Argument(String::from("git"))
         ]);
     }
 
@@ -166,8 +166,8 @@ mod tests {
         ]).parse_cmd();
 
         assert_eq!(parser, vec![
-            CmdPart::Input(String::from("git")),
-            CmdPart::Input(String::from("add"))
+            CmdPart::Argument(String::from("git")),
+            CmdPart::Argument(String::from("add"))
         ]);
     }
 
@@ -181,7 +181,7 @@ mod tests {
 
         assert_eq!(parser, vec![
             CmdPart::Optional{
-                blocks: vec![CmdPart::Input(String::from("file"))]
+                blocks: vec![CmdPart::Argument(String::from("file"))]
             },
         ]);
     }
@@ -199,10 +199,10 @@ mod tests {
 
         assert_eq!(parser, vec![
             CmdPart::Optional{
-                blocks: vec![CmdPart::Input(String::from("file"))]
+                blocks: vec![CmdPart::Argument(String::from("file"))]
             },
             CmdPart::Optional{
-                blocks: vec![CmdPart::Input(String::from("directory"))]
+                blocks: vec![CmdPart::Argument(String::from("directory"))]
             },
         ]);
     }
@@ -220,10 +220,10 @@ mod tests {
 
         assert_eq!(parser, vec![
             CmdPart::Required{
-                blocks: vec![CmdPart::Input(String::from("file"))]
+                blocks: vec![CmdPart::Argument(String::from("file"))]
             },
             CmdPart::Required{
-                blocks: vec![CmdPart::Input(String::from("directory"))]
+                blocks: vec![CmdPart::Argument(String::from("directory"))]
             },
         ]);
     }
