@@ -8,6 +8,9 @@ enum CmdPart {
     Optional {
         blocks: Vec<CmdPart>
     },
+    Required {
+        blocks: Vec<CmdPart>
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -45,6 +48,21 @@ impl CmdParser {
     fn parse_block(&mut self) -> CmdPart {
         match &self.curr_token {
             Some(Token::Str(val)) => CmdPart::Input(val.clone()),
+            Some(Token::LAr) => {
+                let mut blocks = Vec::new();
+                self.next_token();
+                loop {
+                    blocks.push(self.parse_block());
+                    self.next_token();
+                    if let Some(Token::RAr) = self.curr_token {
+                        break;
+                    }
+                }
+
+                CmdPart::Required {
+                    blocks 
+                }
+            },
             Some(Token::LSq) => {
                 let mut blocks = Vec::new();
                 self.next_token();
@@ -179,6 +197,27 @@ mod tests {
                 blocks: vec![CmdPart::Input(String::from("file"))]
             },
             CmdPart::Optional{
+                blocks: vec![CmdPart::Input(String::from("directory"))]
+            },
+        ]);
+    }
+
+    #[test]
+    fn parse_required_blocks() {
+        let parser = CmdParser::new(vec![
+            Token::LAr,
+            Token::Str(String::from("file")),
+            Token::RAr,
+            Token::LAr,
+            Token::Str(String::from("directory")),
+            Token::RAr,
+        ]).parse_cmd();
+
+        assert_eq!(parser, vec![
+            CmdPart::Required{
+                blocks: vec![CmdPart::Input(String::from("file"))]
+            },
+            CmdPart::Required{
                 blocks: vec![CmdPart::Input(String::from("directory"))]
             },
         ]);
