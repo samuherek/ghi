@@ -12,8 +12,7 @@ enum CmdPart {
         blocks: Vec<CmdPart>
     },
     Flag {
-        name: String,
-        input: Vec<CmdPart>
+        values: Vec<String>,
     }
 }
 
@@ -52,6 +51,8 @@ impl CmdParser {
     fn parse_block(&mut self) -> CmdPart {
         match &self.curr_token {
             Some(Token::Str(val)) => CmdPart::Input(val.clone()),
+            Some(Token::FlagShort(val)) => CmdPart::Flag{ values: val.chars().map(|x| x.to_string()).collect() },
+            Some(Token::FlagLong(val)) => CmdPart::Flag{ values: vec![val.clone()] },
             Some(Token::LAr) => {
                 let mut blocks = Vec::new();
                 self.next_token();
@@ -228,21 +229,40 @@ mod tests {
     }
 
     #[test]
-    fn parse_flag() {
+    fn parse_short_flags() {
         let parser = CmdParser::new(vec![
             Token::FlagShort(String::from("f")),
-            Token::FlagShort(String::from("c")),
+            Token::FlagShort(String::from("r")),
+            Token::FlagShort(String::from("rf")),
         ]).parse_cmd();
 
-        // assert_eq!(parser, vec![
-        //     CmdPart::Flag{
-        //         name: String::from("f"),
-        //         input: vec![]
-        //     },
-        //     CmdPart::Flag{
-        //         name: String::from("c")
-        //         input: vec![]
-        //     },
-        // ]);
+        assert_eq!(parser, vec![
+            CmdPart::Flag{
+                values: vec![String::from("f")]
+            },
+            CmdPart::Flag{
+                values: vec![String::from("r")]
+            },
+            CmdPart::Flag{
+                values: vec![String::from("r"), String::from("f")]
+            },
+        ]);
+    }
+
+    #[test]
+    fn parse_long_flags() {
+        let parser = CmdParser::new(vec![
+            Token::FlagLong(String::from("hey")),
+            Token::FlagLong(String::from("depth")),
+        ]).parse_cmd();
+
+        assert_eq!(parser, vec![
+            CmdPart::Flag{
+                values: vec![String::from("hey")]
+            },
+            CmdPart::Flag{
+                values: vec![String::from("depth")]
+            },
+        ]);
     }
 }
