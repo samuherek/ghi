@@ -2,6 +2,7 @@ mod store;
 mod debug;
 mod lexer;
 mod parser;
+mod input_lexer;
 
 use clap::{Parser, Subcommand};
 use rand::seq::SliceRandom;

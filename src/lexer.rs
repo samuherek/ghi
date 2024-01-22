@@ -401,6 +401,22 @@ mod tests {
         assert_eq!(result, exp);
     }
     
+    #[test]
+    fn flag_with_dash() {
+        let input = "[--hard-one] <commit>";
+        let exp = vec![
+            super::Token::LSq,
+            super::Token::FlagLong(String::from("hard-one")),
+            super::Token::RSq,
+            super::Token::LAr,
+            super::Token::Str(String::from("commit")),
+            super::Token::RAr,
+            super::Token::Eof
+        ];
+        let result = super::lex(&input);
+        assert_eq!(result, exp);
+    }
+    
    #[test]
    fn command_and_subcommand() {
        let input = "git reset [--hard | --soft] <commit>";
