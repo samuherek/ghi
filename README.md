@@ -25,7 +25,9 @@ $ ghi
 
 [ ] interactive add to add some context to the command to save
 
-[ ] basic flashcard
+[ ] basic flashcard -> I'm working on this now
+    - Creating a comperator function that walks the ASTs and compares them. 
+    - I should use the same idea how regular expressions work behind the scene. A state machine with backtracing to walk through the optional parts. 
 
 [ ] create a configuration object that sets the storage path (I want to add it to synology to share across computers)
 
