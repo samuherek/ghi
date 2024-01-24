@@ -3,7 +3,7 @@ use crate::lexer::Token;
 type Lexer = Vec<Token>;
 
 #[derive(Debug, PartialEq)]
-enum CmdPart {
+pub enum CmdPart {
     Argument(String),
     Optional {
         blocks: Vec<CmdPart>
@@ -17,7 +17,7 @@ enum CmdPart {
 }
 
 #[derive(Debug, PartialEq)]
-struct CmdParser {
+pub struct CmdParser {
     lexer: Lexer,
     curr_position: usize,
     curr_token: Option<Token>,
@@ -26,7 +26,7 @@ struct CmdParser {
 }
 
 impl CmdParser {
-    fn new(lexer: Lexer) -> Self {
+    pub fn new(lexer: Lexer) -> Self {
         let mut parser =  Self {
             lexer,
             curr_position: 0,
@@ -84,13 +84,14 @@ impl CmdParser {
                     blocks,                    
                 }
             },
+            // TODO: It reaches this at some point when the string is empty
             _ => unimplemented!()
         }
     }
 
-    fn parse_cmd(&mut self) -> Vec<CmdPart> {
+    pub fn parse_cmd(&mut self) -> Vec<CmdPart> {
         let mut res = Vec::new();
-        while self.curr_token.is_some() {
+        while self.curr_token.is_some() && self.curr_token != Some(Token::Eof) {
            let part = self.parse_block();
            res.push(part);
            self.next_token();
@@ -146,6 +147,18 @@ mod tests {
             CmdPart::Argument(String::from("git"))
         ]);
    }
+
+    #[test]
+    fn just_once_letter() {
+        let parser = CmdParser::new(vec![
+            Token::Str(String::from("a")),
+            Token::Eof
+        ]).parse_cmd();
+
+        assert_eq!(parser, vec![
+            CmdPart::Argument(String::from("a"))
+        ]);
+    }
 
     #[test]
     fn parse_command_block() {

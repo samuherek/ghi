@@ -3,6 +3,7 @@ mod debug;
 mod lexer;
 mod parser;
 mod input_lexer;
+mod compare;
 
 use clap::{Parser, Subcommand};
 use rand::seq::SliceRandom;

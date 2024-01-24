@@ -168,6 +168,17 @@ mod tests {
         assert_eq!(token, super::Token::RSq);
 
     }
+
+    #[test]
+    fn just_once_letter() {
+        let input = "a";
+        let exp = vec![
+            super::Token::Str(String::from("a")),
+            super::Token::Eof,
+        ];
+        let result = super::lex(&input);
+        assert_eq!(result, exp);
+    }
     
     #[test]
     fn lex() {
