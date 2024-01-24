@@ -23,25 +23,34 @@ impl CmdCompare {
     fn run(&self) -> bool {
         for (i, part) in self.schema.iter().enumerate() {
             let input_part = self.input.get(i);
-            if input_part.is_none() {
+            if let Some(input_part) = input_part {
+                if !compare_token(part, input_part) {
+                    return false
+                }
+            } else {
                 return false;
-            }
-
-            match part {
-                CmdPart::Argument(val) => {
-                    if let Some(Token::Input(input_part)) = input_part {
-                        if val != input_part {
-                            return false
-                        }
-                    }
-                }, 
-                _ => {}
             }
             println!("{}, {:?}", i, part);
         }
 
         return true
     }
+}
+
+fn compare_token(cmd_token: &CmdPart, input_token: &Token) -> bool {
+    match cmd_token {
+        CmdPart::Argument(cmd_val) => {
+            match input_token {
+                Token::Input(input_val) =>  {
+                    return cmd_val == input_val
+                },
+                _ => return false
+            }
+        },
+        _ => {}
+    }
+
+    return false
 }
 
 
@@ -85,4 +94,11 @@ mod tests {
 
         assert_eq!(comp, false);
     }
+    //
+    // #[test]
+    // fn compare_eq_flag() {
+    //     let comp = CmdCompare::new(&"git -f", &"git -f").run();
+    //
+    //     assert_eq!(comp, true);
+    // }
 }
