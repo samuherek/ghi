@@ -1,46 +1,46 @@
 [
     {
-        "cmd": "split-window [-h | -v] [-p percentage | -l size] [command]",
+        "cmd": "split-window [-h | -v] [-p <percentage>] [-l <size>] [command]",
         "description": "Splits the current pane into two, horizontally or vertically.",
         "tag": "pane"
     },
     {
-        "cmd": "select-pane [-t target-pane]",
+        "cmd": "select-pane [-t <target-pane>]",
         "description": "Selects a specific pane within a window.",
         "tag": "pane"
     },
     {
-        "cmd": "swap-pane [-s src-pane] [-t dst-pane]",
+        "cmd": "swap-pane [-s <src-pane>] [-t <dst-pane>]",
         "description": "Swaps the position of two panes.",
         "tag": "pane"
     },
     {
-        "cmd": "kill-pane [-t target-pane]",
+        "cmd": "kill-pane [-t <target-pane>]",
         "description": "Closes the specified pane.",
         "tag": "pane"
     },
     {
-        "cmd": "resize-pane [-t target-pane] [-U | -D | -L | -R] [adjustment]",
+        "cmd": "resize-pane [-t <target-pane>] [-U | -D | -L | -R] [adjustment]",
         "description": "Resizes a pane in the specified direction.",
         "tag": "pane"
     },
     {
-        "cmd": "rotate-pane [-D | -U] [-t target-pane]",
+        "cmd": "rotate-pane [-D | -U] [-t <target-pane>]",
         "description": "Rotates the position of panes within the window.",
         "tag": "pane"
     },
     {
-        "cmd": "break-pane [-t target-pane] [-d]",
+        "cmd": "break-pane [-t <target-pane>] [-d]",
         "description": "Breaks the pane out into a new window.",
         "tag": "pane"
     },
     {
-        "cmd": "join-pane [-s src-pane] [-t dst-pane]",
+        "cmd": "join-pane [-s <src-pane>] [-t <dst-pane>]",
         "description": "Joins two panes from different windows.",
         "tag": "pane"
     },
     {
-        "cmd": "move-pane [-s src-pane] [-t dst-pane]",
+        "cmd": "move-pane [-s <src-pane>] [-t <dst-pane>]",
         "description": "Moves a pane to a different position or window.",
         "tag": "pane"
     },
@@ -50,22 +50,22 @@
         "tag": "pane"
     },
     {
-        "cmd": "select-layout [-t target-window] [layout-name]",
+        "cmd": "select-layout [-t <target-window>] [layout-name]",
         "description": "Applies a predefined layout to the window's panes.",
         "tag": "pane"
     },
     {
-        "cmd": "next-layout [-t target-window]",
+        "cmd": "next-layout [-t <target-window>]",
         "description": "Switches to the next layout in the current window.",
         "tag": "pane"
     },
     {
-        "cmd": "previous-layout [-t target-window]",
+        "cmd": "previous-layout [-t <target-window>]",
         "description": "Switches to the previous layout in the current window.",
         "tag": "pane"
     },
     {
-        "cmd": "choose-tree [-t target-session]",
+        "cmd": "choose-tree [-t <target-session>]",
         "description": "Opens a visual tree of windows, panes, or sessions to choose from.",
         "tag": "pane"
     },
@@ -75,17 +75,17 @@
         "tag": "pane"
     },
     {
-        "cmd": "bind-key key command [arguments]",
+        "cmd": "bind-key <key> <command> [arguments]",
         "description": "Binds a key to a tmux command.",
         "tag": "misc"
     },
     {
-        "cmd": "unbind-key key",
+        "cmd": "unbind-key <key>",
         "description": "Unbinds a key.",
         "tag": "misc"
     },
     {
-        "cmd": "set-option [-g] option value",
+        "cmd": "set-option [-g] <option> <value>",
         "description": "Sets a tmux option.",
         "tag": "misc"
     },
@@ -105,82 +105,82 @@
         "tag": "misc"
     },
     {
-        "cmd": "refresh-client [-t target-client]",
+        "cmd": "refresh-client [-t <target-client>]",
         "description": "Refreshes the current client.",
         "tag": "misc"
     },
     {
-        "cmd": "attach-session [-d] [-t target-session]",
+        "cmd": "attach-session [-d] [-t <target-session>]",
         "description": "Attaches to a session and optionally detaches other clients.",
         "tag": "misc"
     },
     {
-        "cmd": "lock-client [-t target-client]",
+        "cmd": "lock-client [-t <target-client>]",
         "description": "Locks a client.",
         "tag": "misc"
     },
     {
-        "cmd": "send-keys [-t target-pane] keys",
+        "cmd": "send-keys [-t <target-pane>] <keys>",
         "description": "Sends keys to a pane.",
         "tag": "misc"
     },
     {
-        "cmd": "display-message [-p] [-t target-client] message",
+        "cmd": "display-message [-p] [-t <target-client>] <message>",
         "description": "Displays a message.",
         "tag": "misc"
     },
     {
-        "cmd": "capture-pane [-t target-pane]",
+        "cmd": "capture-pane [-t <target-pane>]",
         "description": "Captures the contents of a pane.",
         "tag": "misc"
     },
     {
-        "cmd": "save-buffer [-b buffer-index] path",
+        "cmd": "save-buffer [-b <buffer-index>] <path>",
         "description": "Saves a tmux buffer to a file.",
         "tag": "misc"
     },
     {
-        "cmd": "load-buffer [-b buffer-index] path",
+        "cmd": "load-buffer [-b <buffer-index>] <path>",
         "description": "Loads a file into a tmux buffer.",
         "tag": "misc"
     },
     {
-        "cmd": "show-buffer [-b buffer-index]",
+        "cmd": "show-buffer [-b <buffer-index>]",
         "description": "Displays the contents of a buffer.",
         "tag": "misc"
     },
     {
-        "cmd": "delete-buffer [-b buffer-index]",
+        "cmd": "delete-buffer [-b <buffer-index>]",
         "description": "Deletes a buffer.",
         "tag": "misc"
     },
     {
-        "cmd": "paste-buffer [-t target-pane] [-b buffer-index]",
+        "cmd": "paste-buffer [-t <target-pane>] [-b <buffer-index>]",
         "description": "Pastes a buffer into a pane.",
         "tag": "misc"
     },
     {
-        "cmd": "choose-buffer [-t target-window]",
+        "cmd": "choose-buffer [-t <target-window>]",
         "description": "Opens a menu to choose a buffer interactively.",
         "tag": "misc"
     },
     {
-        "cmd": "if-shell [-b] [-t target-pane] shell-command command [else-command]",
+        "cmd": "if-shell [-b] [-t <target-pane>] <shell-command> <command> [else-command]",
         "description": "Conditionally executes a command based on a shell command's return status.",
         "tag": "misc"
     },
     {
-        "cmd": "command-prompt [-I initial-input] \"command\"",
+        "cmd": "command-prompt [-I <initial-input>] <command>",
         "description": "Opens a prompt for input and then executes a command with that input.",
         "tag": "misc"
     },
     {
-        "cmd": "confirm-before [-p prompt] command",
+        "cmd": "confirm-before [-p <prompt>] <command>",
         "description": "Prompts for confirmation before executing a command.",
         "tag": "misc"
     },
     {
-        "cmd": "run-shell [-b] [-t target-pane] shell-command",
+        "cmd": "run-shell [-b] [-t <target-pane>] <shell-command>",
         "description": "Executes a shell command.",
         "tag": "misc"
     },
@@ -190,27 +190,27 @@
         "tag": "misc"
     },
     {
-        "cmd": "new-session [-s session-name] [-n window-name] [command]",
+        "cmd": "new-session [-s <session-name>] [-n <window-name>] [command]",
         "description": "Creates a new tmux session.",
         "tag": "session"
     },
     {
-        "cmd": "attach-session [-t target-session]",
+        "cmd": "attach-session [-t <target-session>]",
         "description": "Attaches to an existing tmux session.",
         "tag": "session"
     },
     {
-        "cmd": "detach-client [-t target-client]",
+        "cmd": "detach-client [-t <target-client>]",
         "description": "Detaches the client from the current session.",
         "tag": "session"
     },
     {
-        "cmd": "switch-client [-c target-client] [-t target-session]",
+        "cmd": "switch-client [-c <target-client>] [-t <target-session>]",
         "description": "Switches the client to a different session.",
         "tag": "session"
     },
     {
-        "cmd": "has-session [-t target-session]",
+        "cmd": "has-session [-t <target-session>]",
         "description": "Checks if a session exists.",
         "tag": "session"
     },
@@ -220,143 +220,53 @@
         "tag": "session"
     },
     {
-        "cmd": "kill-session [-t target-session]",
+        "cmd": "kill-session [-t <target-session>]",
         "description": "Kills (terminates) a tmux session.",
         "tag": "session"
     },
     {
-        "cmd": "rename-session [-t current-name] new-name",
+        "cmd": "rename-session [-t <current-name>] <new-name>",
         "description": "Renames an existing tmux session.",
         "tag": "session"
     },
     {
-        "cmd": "lock-session [-t target-session]",
+        "cmd": "lock-session [-t <target-session>]",
         "description": "Locks the current session.",
         "tag": "session"
     },
     {
-        "cmd": "suspend-client [-t target-client]",
+        "cmd": "suspend-client [-t <target-client>]",
         "description": "Suspends a client, stopping it from receiving updates.",
         "tag": "session"
     },
     {
-        "cmd": "choose-client [-t target-session]",
+        "cmd": "choose-client [-t <target-session>]",
         "description": "Opens a menu to choose a client interactively.",
         "tag": "session"
     },
     {
-        "cmd": "choose-tree [-t target-session]",
+        "cmd": "choose-tree [-t <target-session>]",
         "description": "Opens a visual tree of windows, panes, or sessions to choose from.",
         "tag": "session"
     },
     {
-        "cmd": "refresh-client [-t target-client]",
+        "cmd": "refresh-client [-t <target-client>]",
         "description": "Refreshes the current client.",
         "tag": "session"
     },
     {
-        "cmd": "show-messages [-t target-client]",
+        "cmd": "show-messages [-t <target-client>]",
         "description": "Shows tmux messages.",
         "tag": "session"
     },
     {
-        "cmd": "source-file path-to-config-file",
+        "cmd": "source-file <path-to-config-file>",
         "description": "Loads a .tmux.conf file.",
         "tag": "session"
     },
     {
-        "cmd": "start-server",
-        "description": "Starts the tmux server but doesn't attach or create any sessions.",
-        "tag": "session"
-    },
-    {
-        "cmd": "wait-for [-L | -U | -S] lock-name",
+        "cmd": "wait-for [-L | -U | -S] <lock-name>",
         "description": "Waits for a lock to be released.",
         "tag": "session"
-    },
-    {
-        "cmd": "new-window [-n window-name] [command]",
-        "description": "Creates a new window in the current session.",
-        "tag": "window"
-    },
-    {
-        "cmd": "select-window [-t target-window]",
-        "description": "Selects a window in the current session.",
-        "tag": "window"
-    },
-    {
-        "cmd": "rename-window new-name",
-        "description": "Renames the current window.",
-        "tag": "window"
-    },
-    {
-        "cmd": "kill-window [-t target-window]",
-        "description": "Closes the specified window.",
-        "tag": "window"
-    },
-    {
-        "cmd": "list-windows [-t target-session]",
-        "description": "Lists all windows in the specified session.",
-        "tag": "window"
-    },
-    {
-        "cmd": "find-window [-t target-window]",
-        "description": "Searches for a window containing target-window.",
-        "tag": "window"
-    },
-    {
-        "cmd": "move-window [-s src-window] [-t dst-window]",
-        "description": "Moves a window to a different position or session."p,
-        "tag": "window"
-    },
-    {
-        "cmd": "link-window [-s src-window] [-t dst-window]",
-        "description": "Links a window from one session to another."p,
-        "tag": "window"
-    },
-    {
-        "cmd": "break-pane [-t target-pane] [-d]",
-        "description": "Breaks a pane out into a new window.",
-        "tag": "window"
-    },
-    {
-        "cmd": "join-pane [-s src-pane] [-t dst-pane]",
-        "description": "Joins two panes from different windows.",
-        "tag": "window"
-    },
-    {
-        "cmd": "swap-window [-s src-window] [-t dst-window]",
-        "description": "Swaps the position of two windows."p,
-        "tag": "window"
-    },
-    {
-        "cmd": "rotate-window [-D | -U] [-t target-window]",
-        "description": "Rotates the positions of panes within a window.",
-        "tag": "window"
-    },
-    {
-        "cmd": "next-window [-t target-session]",
-        "description": "Selects the next window in the session.",
-        "tag": "window"
-    },
-    {
-        "cmd": "previous-window [-t target-session]",
-        "description": "Selects the previous window in the session.",
-        "tag": "window"
-    },
-    {
-        "cmd": "last-window [-t target-session]",
-        "description": "Selects the last window used in the session.",
-        "tag": "window"
-    },
-    {
-        "cmd": "choose-window [-t target-session]",
-        "description": "Opens a menu to choose a window interactively.",
-        "tag": "window"
-    },
-    {
-        "cmd": "resize-window [-t target-window] [-x width] [-y height] [-U | -D | -L | -R]",
-        "description": "Resizes the current window.",
-        "tag": "window"
     }
 ]

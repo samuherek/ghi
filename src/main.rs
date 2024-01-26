@@ -191,8 +191,8 @@ impl Drop for ScreenState {
 
 
 #[derive(Deserialize)]
-struct Course {
-    command: String, 
+struct Cmd {
+    cmd: String, 
     description: String,
     tag: String
 }
@@ -261,12 +261,19 @@ enum Token {
     Argument(Arg),
 }
 
+// [] optional
+// <> required
+// ... previous element can repeat
+
 fn lex(input: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let parts = input.split_whitespace().collect::<Vec<_>>();
 
     for part in parts {
-        if part.starts_with('-') {
+        if part.starts_with('[') {
+            
+
+        } else if part.starts_with('-') {
             tokens.push(Token::Flag(part.to_string()));
         } else if part.starts_with('<') && part.ends_with('>') {
             let val = &part[1..part.len().saturating_sub(1)];
@@ -334,11 +341,12 @@ fn main() -> anyhow::Result<()>{
             };
         },
         Some(Commands::Tmux) => {
-            let data = fs::read_to_string(PathBuf::from("input.json")).unwrap();
-            let course: Vec<Course> = serde_json::from_str(&data)?;
+            let data = fs::read_to_string(PathBuf::from("tmux.json")).unwrap();
+            let course: Vec<Cmd> = serde_json::from_str(&data)?;
             let quest = course.into_iter().nth(0).unwrap();
 
-            let l = lex(&quest.command);
+            println!("{}", quest.cmd);
+            let l = lex(&quest.cmd);
             println!("tokens:: {:?}", l);
 
             // let mut screen = ScreenTmux::enable()?;
