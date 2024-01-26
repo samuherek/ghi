@@ -68,7 +68,7 @@ impl CmdParser {
 
         match token {
             Token::Str(val) => {
-                if self.curr_position == 0 {
+                if self.curr_position == 2 {
                     CmdChunk::Command(val.clone())
                 } else {
                     CmdChunk::Arg(val.clone())
@@ -114,17 +114,6 @@ impl CmdParser {
                 unimplemented!()
             }
         }
-    }
-
-    pub fn parse_cmd(&mut self) -> Vec<CmdChunk> {
-        let mut res = Vec::new();
-        while self.curr_token.is_some() {
-           let part = self.parse_chunk();
-           res.push(part);
-           self.next_token();
-        };
-
-        res
     }
 }
 

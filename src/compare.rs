@@ -4,96 +4,89 @@ use super::input_lexer;
 use super::input_lexer::Token;
 
 
-#[derive(Debug, PartialEq)]
-struct CmdCompare {
-    schema: Vec<CmdChunk>,
-    input: Vec<Token>,
-}
+fn match_schema(ast: &Vec<CmdChunk>, tokens: &Vec<Token>, ast_idx: usize, token_idx: usize) -> Vec<(String, bool)> {
+    let mut curr_ast_idx = ast_idx;
+    let mut curr_token_idx = token_idx;
+    let mut res: Vec<(String, bool)> = Vec::new();
 
-impl CmdCompare {
-    fn new(cmd: &str, input: &str) -> Self {
-        Self {
-            schema: CmdParser::compile(cmd),
-            input: input_lexer::lex(input),
-        }
-    }
+    while curr_ast_idx < ast.len() && curr_token_idx < tokens.len() {
+        match (&ast[curr_ast_idx], &tokens[curr_token_idx]) {
+            (CmdChunk::Command(cmd), Token::Input(word)) if cmd == word => {
+                res.push((cmd.clone(), true));
+                curr_ast_idx += 1;
+                curr_token_idx += 1;
+            },
+            (CmdChunk::Arg(cmd), Token::Input(word)) if cmd == word => {
+                res.push((cmd.clone(), true));
+                curr_ast_idx += 1;
+                curr_token_idx += 1;
+            },
+            (CmdChunk::Flag{ values }, Token::FlagShort(flag)) => {
+                curr_ast_idx += 1;
+                curr_token_idx += 1;
+                let mut correct = false;
+                let mut f = String::new();
 
-    /// parser:: CmdChunk::Argument(String::from("git"))
-    /// input:: Token::Input(String::from("paste-buffer")),
-    fn run(&self) -> bool {
-        for (i, part) in self.schema.iter().enumerate() {
-            let input_part = self.input.get(i);
-            if let Some(input_part) = input_part {
-                if !compare_token(part, input_part) {
-                    return false
+                let flags: Vec<char> = flag.chars().collect();
+                if values.len() == flags.len() && values.iter().all(|x| x.chars().next().is_some_and(|xx| flags.contains(&xx))) {
+                    correct = true;
+                    f.push('-');
+                    f.push_str(flag.as_str());
                 }
-            } else {
-                return false;
+
+                res.push((f, correct));
+            },
+            (CmdChunk::Flag{ values }, Token::FlagLong(flag)) => {
+                curr_ast_idx += 1;
+                curr_token_idx += 1;
+                let mut correct = false;
+                let mut f = String::new();
+
+                if values.len() == 1 && values.iter().next().is_some_and(|x| x == flag) {
+                    correct = true;
+                    f.push_str("--");
+                    f.push_str(flag.as_str());
+                }
+
+                res.push((f, correct));
+            },
+            _ => {
+                res.push(("Unknow".to_string(), false));
+                break; 
             }
-            println!("{}, {:?}", i, part);
         }
-
-        return true
-    }
-}
-
-fn compare_token(cmd_token: &CmdChunk, input_token: &Token) -> bool {
-    match cmd_token {
-        CmdChunk::Arg(cmd_val) => {
-            match input_token {
-                Token::Input(input_val) =>  {
-                    return cmd_val == input_val
-                },
-                _ => return false
-            }
-        },
-        _ => {}
     }
 
-    return false
+    return res 
 }
-
 
 mod tests {
     use super::*;
 
-    #[test]
-    fn init_empty_compare() {
-        let comp = CmdCompare::new(&"", &"");
-
-        assert_eq!(comp, CmdCompare {
-            schema: Vec::new(),
-            input: Vec::new()
-        });
-    }
 
     #[test]
-    fn compare_eq_string() {
-        let comp = CmdCompare::new(&"git", &"git").run();
+    fn match_matching_schema() {
+        let tests = vec![
+            "git",
+            "-g",
+            "--depth"
+        ];
 
-        assert_eq!(comp, true);
+        for t in tests {
+            let ast = CmdParser::compile(t);
+            let input = input_lexer::lex(t);
+            println!("{:?}", ast);
+            println!("{:?}", input);
+            let matcher = match_schema(&ast, &input, 0, 0);
+
+            for (val, correctness) in matcher {
+                assert_eq!(val, t);
+                assert_eq!(correctness, val == t);
+            }
+        }
     }
 
-    #[test]
-    fn compare_noteq_string() {
-        let comp = CmdCompare::new(&"git", &"gits").run();
 
-        assert_eq!(comp, false);
-    }
-
-    #[test]
-    fn compare_two_eq_sting() {
-        let comp = CmdCompare::new(&"git add", &"git add").run();
-
-        assert_eq!(comp, true);
-    }
-
-    #[test]
-    fn compare_two_noteq_sting() {
-        let comp = CmdCompare::new(&"git add", &"git commit").run();
-
-        assert_eq!(comp, false);
-    }
     //
     // #[test]
     // fn compare_eq_flag() {
