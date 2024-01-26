@@ -33,7 +33,7 @@ pub struct CmdParser {
 }
 
 impl CmdParser {
-    fn compile(input: &str) -> Vec<CmdChunk> {
+    pub fn compile(input: &str) -> Vec<CmdChunk> {
         let lexer = CmdLexer::compile(input);
         let mut parser =  Self {
             lexer,
@@ -54,21 +54,6 @@ impl CmdParser {
         };
 
        return ast;
-    }
-
-    pub fn new(lexer: Vec<Token>) -> Self {
-        let mut parser =  Self {
-            lexer,
-            curr_position: 0,
-            curr_token: None,
-            peak_token: None,
-            errors: Vec::new()
-        };
-
-        parser.next_token();
-        parser.next_token();
-
-       return parser;
     }
 
     fn next_token(&mut self) {
@@ -181,9 +166,7 @@ mod tests {
 
     #[test]
     fn creates_parser() {
-        let parser = CmdParser::new(vec![
-            Token::Str(String::from("git")),
-        ]).parse_cmd();
+        let parser = CmdParser::compile("git");
 
         assert_eq!(parser, vec![
             CmdChunk::Arg(String::from("git"))
@@ -192,9 +175,7 @@ mod tests {
 
     #[test]
     fn just_once_letter() {
-        let parser = CmdParser::new(vec![
-            Token::Str(String::from("a")),
-        ]).parse_cmd();
+        let parser = CmdParser::compile("a");
 
         assert_eq!(parser, vec![
             CmdChunk::Arg(String::from("a"))
@@ -203,9 +184,7 @@ mod tests {
 
     #[test]
     fn parse_command_block() {
-        let parser = CmdParser::new(vec![
-            Token::Str(String::from("git")),
-        ]).parse_cmd();
+        let parser = CmdParser::compile("git");
 
         assert_eq!(parser, vec![
             CmdChunk::Arg(String::from("git"))
@@ -214,10 +193,7 @@ mod tests {
 
     #[test]
     fn parse_command_and_subcomand_block() {
-        let parser = CmdParser::new(vec![
-            Token::Str(String::from("git")),
-            Token::Str(String::from("add")),
-        ]).parse_cmd();
+        let parser = CmdParser::compile("git add");
 
         assert_eq!(parser, vec![
             CmdChunk::Arg(String::from("git")),
@@ -227,11 +203,7 @@ mod tests {
 
     #[test]
     fn parse_optional_block() {
-        let parser = CmdParser::new(vec![
-            Token::LSq,
-            Token::Str(String::from("file")),
-            Token::RSq,
-        ]).parse_cmd();
+        let parser = CmdParser::compile("[file]");
 
         assert_eq!(parser, vec![
                    CmdChunk::Chunk{
@@ -243,14 +215,7 @@ mod tests {
 
     #[test]
     fn parse_optional_blocks() {
-        let parser = CmdParser::new(vec![
-            Token::LSq,
-            Token::Str(String::from("file")),
-            Token::RSq,
-            Token::LSq,
-            Token::Str(String::from("directory")),
-            Token::RSq,
-        ]).parse_cmd();
+        let parser = CmdParser::compile("[file] [directory]");
 
         assert_eq!(parser, vec![
             CmdChunk::Chunk {
@@ -266,14 +231,7 @@ mod tests {
 
     #[test]
     fn parse_required_blocks() {
-        let parser = CmdParser::new(vec![
-            Token::LAr,
-            Token::Str(String::from("file")),
-            Token::RAr,
-            Token::LAr,
-            Token::Str(String::from("directory")),
-            Token::RAr,
-        ]).parse_cmd();
+        let parser = CmdParser::compile("<file> <directory>");
 
         assert_eq!(parser, vec![
             CmdChunk::Chunk{
@@ -289,11 +247,7 @@ mod tests {
 
     #[test]
     fn parse_short_flags() {
-        let parser = CmdParser::new(vec![
-            Token::FlagShort(String::from("f")),
-            Token::FlagShort(String::from("r")),
-            Token::FlagShort(String::from("rf")),
-        ]).parse_cmd();
+        let parser = CmdParser::compile("-f -r -rf");
 
         assert_eq!(parser, vec![
             CmdChunk::Flag{
@@ -310,10 +264,7 @@ mod tests {
 
     #[test]
     fn parse_long_flags() {
-        let parser = CmdParser::new(vec![
-            Token::FlagLong(String::from("hey")),
-            Token::FlagLong(String::from("depth")),
-        ]).parse_cmd();
+        let parser = CmdParser::compile("--hey --depth");
 
         assert_eq!(parser, vec![
             CmdChunk::Flag{

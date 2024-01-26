@@ -13,7 +13,7 @@ struct CmdCompare {
 impl CmdCompare {
     fn new(cmd: &str, input: &str) -> Self {
         Self {
-            schema: CmdParser::new(CmdLexer::compile(cmd)).parse_cmd(),
+            schema: CmdParser::compile(cmd),
             input: input_lexer::lex(input),
         }
     }
@@ -101,4 +101,63 @@ mod tests {
     //
     //     assert_eq!(comp, true);
     // }
+    //
+
+    // schema: git add .
+    // input: git add
+    //
+    // compare: (failure)
+    // git add "src"
+    // ___ ___  xxx
+    
+    // schema: git commit -m "init"
+    // input: git commit "init"
+    //
+    // compare: (failure)
+    // git commit -m "init" 
+    // ___ ______ xxx _____
+    
+    // schema: display-message -p -t client-0 "hello, world" 
+    // input: display-message -p -t client-0 "hello, world" 
+    //
+    // compare: (success)
+    // display-message -p -t client-0 "hello, world" 
+    // --------------- -- -- -------- --------------
+    
+    // schema: display-message -p -t client-0 "hello, world" 
+    // input: display-message -t client-0 "hello, world" 
+    //
+    // compare: (failure)
+    // display-message -p -t client-0 "hello, world" 
+    // --------------- xx -- -------- --------------
+    
+    // schema: display-message -p -t client-0 "hello, world" 
+    // input: display-message client-0 "hello, world" 
+    //
+    // compare: (failure)
+    // display-message -p -t client-0 "hello, world" 
+    // --------------- xx xx -------- --------------
+    
+    // schema: display-message -p -t client-0 "hello, world" 
+    // input: display-message -p "hello, world" 
+    //
+    // compare: (failure)
+    // display-message -p -t client-0 "hello, world" 
+    // --------------- -- xx xxxxxxxx --------------
+    
+    // schema: display-message -p -t client-0 "hello, world" 
+    // input: display-message "hello, world" 
+    //
+    // compare: (failure)
+    // display-message -p -t client-0 "hello, world" 
+    // --------------- xx xx xxxxxxxx --------------
+    
+
+    // edge case which we probably don't want to support.
+    // schema: display-message -p -t client-0 "hello, world" 
+    // input: display-message -t -p client-0 "hello, world" 
+    //
+    // compare: (success)
+    // display-message -t -p client-0 "hello, world" 
+    // --------------- -- -- -------- --------------
 }
