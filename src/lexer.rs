@@ -10,173 +10,141 @@ pub enum Token {
     Multiple,
     Or,
     Str(String),
-    Illegal,
-    Eof,
+    Illegal(char),
 }
 
-struct CmdLexer<'a > {
+pub struct CmdLexer<'a > {
     input: &'a str, 
     position: usize,
     read_position: usize,
-    ch: char
+    ch: Option<char>
 }
 
 impl<'a> CmdLexer<'a> {
-    fn new(input: &'a str) -> Self {
+    pub fn compile(input: &'a str) -> Vec<Token> {
+        let mut tokens = Vec::new();
         let mut lexer = Self {
             input,
             position: 0,
             read_position: 0,
-            ch: '0'
+            ch: None
         };
         lexer.read_char();
-        return lexer;
+
+        while let Some(token) = lexer.next_token() {
+            tokens.push(token);
+        }
+
+        tokens
     }
 
     fn read_char(&mut self) {
-        self.ch = self.input.chars().nth(self.read_position).unwrap_or('0');
+        self.ch = self.input.chars().nth(self.read_position);
         self.position = self.read_position;
         self.read_position += 1;
     }
 
-    fn peak_char(&self) -> char {
-        self.input.chars().nth(self.read_position).unwrap_or('0')
+    fn peak_char(&self) -> Option<char> {
+        self.input.chars().nth(self.read_position)
     }
 
     fn read_str(&mut self) -> String {
         let pos = self.position;
-        while is_str_letter(self.ch) {
+        while is_str_letter(self.peak_char()) {
             self.read_char();
         }
-        return self.input[pos..self.position].to_string();
+        return self.input[pos..=self.position].to_string();
+    }
+
+    fn read_flag(&mut self) -> String {
+        let pos = self.position;
+        while is_flag_letter(self.peak_char()) {
+            self.read_char();
+        }
+        return self.input[pos..=self.position].to_string();
     }
 
     fn skip_whitespace(&mut self) {
-        while self.ch == ' ' {
+        while self.ch == Some(' ') {
             self.read_char();
         }
     }
 
     fn consume_dots(&mut self) {
-        while self.ch == '.' {
+        while self.peak_char() == Some('.') {
             self.read_char();
         }
     }
 
-    fn next_token(&mut self) -> Token {
+    fn next_token(&mut self) -> Option<Token> {
         self.skip_whitespace();        
 
-        let token = match self.ch {
-            '[' => Token::LSq,
-            ']' => Token::RSq,
-            '<' => Token::LAr,
-            '>' => Token::RAr,
-            '-' => {
-                if self.peak_char() == '-' {
-                    self.read_char();
-                    self.read_char();
-                    let value = self.read_str(); 
-                    return Token::FlagLong(value)
-                } else {
-                    self.read_char();
-                    let value = self.read_str(); 
-                    return Token::FlagShort(value)
-                }
-            },
-            '.' => {
-                self.consume_dots();
-                return Token::Multiple;
-            },
-            '|' => Token::Or,
-            'a'..='z' | 'A'..='Z' => {
-                let value = self.read_str(); 
-                // TODO: might need to use "peak" instead of "read"
-                // so that we don't have to "return" which is inconsistent
-                // with the rest of the arms.
-                return Token::Str(value)
-            },
-            '0' => Token::Eof,
-            _ => Token::Illegal
-        };
-        self.read_char();
-        return token;
+        if let Some(token) = self.ch {
+            let token = match token {
+                '[' => Some(Token::LSq),
+                ']' => Some(Token::RSq),
+                '<' => Some(Token::LAr),
+                '>' => Some(Token::RAr),
+                '-' => {
+                    if self.peak_char() == Some('-') {
+                        self.read_char();
+                        self.read_char();
+                        Some(Token::FlagLong(self.read_flag()))
+                    } else {
+                        self.read_char();
+                        Some(Token::FlagShort(self.read_flag()))
+                    }
+                },
+                '.' => {
+                    self.consume_dots();
+                    Some(Token::Multiple)
+                },
+                '|' => Some(Token::Or),
+                'a'..='z' | 'A'..='Z' => Some(Token::Str(self.read_str())),
+                _ => Some(Token::Illegal(token))
+            };
+            self.read_char();
+            token
+        } else {
+            None
+        }
+    }
+}
+
+fn is_flag_letter( input: Option<char>) -> bool {
+    if let Some(input) = input {
+        match input {
+            'a'..='z' | 'A'..='Z' | '-'  => true,
+            _ => false
+        }
+    } else {
+        false
     }
 }
 
 // TODO: implement the possibility to have numbers inside a string 
 // that does not start with a number.
 // Currently, it breaks, because we use '0' as an EOF enum
-fn is_str_letter(input: char) -> bool {
-    match input {
-        'a'..='z' | 'A'..='Z' | '-' | '_'  => true,
-        _ => false
-    }
-}
-
-fn split_cmd(input: &str) -> (&str, &str) {
-    if input.contains(' ') {
-        input.split_once(' ').expect("input to be splittable on space")
-    } else {
-        (input, &"")
-    }
-}
-
-//"suspend-client [-t <target-client>]"
-pub fn lex(input: &str) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    let mut lexer = CmdLexer::new(&input);
-    let mut to_next = true;
-
-    while to_next {
-        let token = lexer.next_token(); 
-        if token == Token::Eof {
-            to_next = false;
+fn is_str_letter(input: Option<char>) -> bool {
+    if let Some(input) = input {
+        match input {
+            'a'..='z' | 'A'..='Z' | '-' | '_'  => true,
+            _ => false
         }
-        tokens.push(token);
+    } else {
+        false
     }
-
-    return tokens;
 }
-
 
 #[cfg(test)]
 mod tests {
-
-    #[test]
-    fn split_cmd() {
-        let value = "choose-client [-t <target-session>]";
-        let (cmd, _) = super::split_cmd(&value);
-
-        assert_eq!(cmd, "choose-client");
-
-        let value = "choose-client";
-        let (cmd, _) = super::split_cmd(&value);
-
-        assert_eq!(cmd, "choose-client");
-    }
-
-    #[test]
-    fn next_token() {
-        let value = "choose-client []";
-        let (_, input) = super::split_cmd(&value);
-        let mut lexer = super::CmdLexer::new(&input);
-
-        let token = lexer.next_token();
-        assert_eq!(token, super::Token::LSq);
-
-        let token = lexer.next_token();
-        assert_eq!(token, super::Token::RSq);
-
-    }
-
     #[test]
     fn just_once_letter() {
         let input = "a";
         let exp = vec![
             super::Token::Str(String::from("a")),
-            super::Token::Eof,
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
     
@@ -189,9 +157,8 @@ mod tests {
             super::Token::LAr,
             super::Token::RAr,
             super::Token::Str(String::from("f")),
-            super::Token::Eof,
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -205,9 +172,8 @@ mod tests {
             super::Token::RAr,
             super::Token::FlagShort(String::from("fa")),
             super::Token::LSq,
-            super::Token::Eof,
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -221,9 +187,8 @@ mod tests {
             super::Token::Str(String::from("target-session")),
             super::Token::RAr,
             super::Token::RSq,
-            super::Token::Eof,
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -240,9 +205,8 @@ mod tests {
             super::Token::LAr,
             super::Token::Str(String::from("new-name")),
             super::Token::RAr, 
-            super::Token::Eof,
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -262,9 +226,8 @@ mod tests {
             super::Token::Str(String::from("target-session")),
             super::Token::RAr,
             super::Token::RSq,
-            super::Token::Eof,
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -284,9 +247,8 @@ mod tests {
             super::Token::LAr,
             super::Token::Str(String::from("shell-command")),
             super::Token::RAr,
-            super::Token::Eof,
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -309,9 +271,8 @@ mod tests {
             super::Token::LSq,
             super::Token::Str(String::from("command")),
             super::Token::RSq,
-            super::Token::Eof,
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -337,9 +298,8 @@ mod tests {
             super::Token::LSq,
             super::Token::Str(String::from("else-command")),
             super::Token::RSq,
-            super::Token::Eof,
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -358,9 +318,8 @@ mod tests {
             super::Token::Str(String::from("target-pane")),
             super::Token::RAr,
             super::Token::RSq,
-            super::Token::Eof,
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -388,9 +347,8 @@ mod tests {
             super::Token::Str(String::from("directory")),
             super::Token::RAr,
             super::Token::RSq,
-            super::Token::Eof,
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -406,9 +364,8 @@ mod tests {
             super::Token::LAr,
             super::Token::Str(String::from("commit")),
             super::Token::RAr,
-            super::Token::Eof
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
     
@@ -422,9 +379,8 @@ mod tests {
             super::Token::LAr,
             super::Token::Str(String::from("commit")),
             super::Token::RAr,
-            super::Token::Eof
         ];
-        let result = super::lex(&input);
+        let result = super::CmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
     
@@ -442,9 +398,8 @@ mod tests {
            super::Token::LAr,
            super::Token::Str(String::from("commit")),
            super::Token::RAr,
-           super::Token::Eof
        ];
-       let result = super::lex(&input);
+       let result = super::CmdLexer::compile(&input);
        assert_eq!(result, exp);
    }
 
@@ -465,9 +420,8 @@ mod tests {
            super::Token::RAr,
            super::Token::Multiple,
            super::Token::RSq,
-           super::Token::Eof
        ];
-       let result = super::lex(&input);
+       let result = super::CmdLexer::compile(&input);
        assert_eq!(result, exp);
    }
 }

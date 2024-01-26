@@ -1,24 +1,24 @@
-use super::parser::{CmdPart, CmdParser};
-use super::lexer;
+use super::parser::{CmdChunk, CmdParser};
+use super::lexer::{CmdLexer};
 use super::input_lexer;
 use super::input_lexer::Token;
 
 
 #[derive(Debug, PartialEq)]
 struct CmdCompare {
-    schema: Vec<CmdPart>,
+    schema: Vec<CmdChunk>,
     input: Vec<Token>,
 }
 
 impl CmdCompare {
     fn new(cmd: &str, input: &str) -> Self {
         Self {
-            schema: CmdParser::new(lexer::lex(cmd)).parse_cmd(),
+            schema: CmdParser::new(CmdLexer::compile(cmd)).parse_cmd(),
             input: input_lexer::lex(input),
         }
     }
 
-    /// parser:: CmdPart::Argument(String::from("git"))
+    /// parser:: CmdChunk::Argument(String::from("git"))
     /// input:: Token::Input(String::from("paste-buffer")),
     fn run(&self) -> bool {
         for (i, part) in self.schema.iter().enumerate() {
@@ -37,9 +37,9 @@ impl CmdCompare {
     }
 }
 
-fn compare_token(cmd_token: &CmdPart, input_token: &Token) -> bool {
+fn compare_token(cmd_token: &CmdChunk, input_token: &Token) -> bool {
     match cmd_token {
-        CmdPart::Argument(cmd_val) => {
+        CmdChunk::Arg(cmd_val) => {
             match input_token {
                 Token::Input(input_val) =>  {
                     return cmd_val == input_val
