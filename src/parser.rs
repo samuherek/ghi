@@ -1,4 +1,5 @@
 use crate::lexer::{Token, CmdLexer};
+use std::fmt;
 
 #[derive(Debug, PartialEq)]
 enum BinaryOp {
@@ -20,6 +21,23 @@ pub enum CmdChunk {
         op:  BinaryOp,
         lhs: Box<CmdChunk>,
         rhs: Box<CmdChunk>,
+    }
+}
+
+impl fmt::Display for CmdChunk {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CmdChunk::Command(val) => write!(f, "{val}"),
+            CmdChunk::Arg(val) => write!(f, "{val}"),
+            CmdChunk::Chunk{content, required} => {
+                let content = content.to_string(); 
+                if *required {
+                    write!(f, "<{content}>")
+                } else {
+                    write!(f, "[{content}]")
+                }
+            }
+        }
     }
 }
 
@@ -110,7 +128,8 @@ impl CmdParser {
                 }
             },
             // TODO: It reaches this at some point when the string is empty
-            _ => {
+            v => {
+                println!("{:?}", v);
                 unimplemented!()
             }
         }
