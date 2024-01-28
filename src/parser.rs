@@ -6,8 +6,44 @@ enum BinaryOp {
     Or
 }
 
+
+
+/// This is the rough docs for the structure of the chunks
+///
+/// The input value
+/// used for literal values like commands, subcommands
+/// == Literal
+/// - value: String
+/// - required : Bool
+///
+/// The input value
+/// used as a variable value like strings, paths, ...
+/// == Variable
+/// - name : String
+/// - type: String | Int
+/// - required : Bool
+/// TODO: - multiple: Bool
+///
+/// == FlagShort
+/// - value: Char
+/// - input: Option<Input>
+/// - required : Bool
+///
+/// == FlagLong
+/// - value: String
+/// - input: Option<Input>
+/// - required : Bool
+///
+/// == FlagCombo
+/// - values: Char[],
+/// - required : Bool
+///
+/// == Or
+/// - lhs: Inp,
+/// - rhs: Inp,
 #[derive(Debug, PartialEq)]
 pub enum CmdChunk {
+    
     Command(String),
     Arg(String),
     Chunk {
@@ -24,22 +60,22 @@ pub enum CmdChunk {
     }
 }
 
-impl fmt::Display for CmdChunk {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            CmdChunk::Command(val) => write!(f, "{val}"),
-            CmdChunk::Arg(val) => write!(f, "{val}"),
-            CmdChunk::Chunk{content, required} => {
-                let content = content.to_string(); 
-                if *required {
-                    write!(f, "<{content}>")
-                } else {
-                    write!(f, "[{content}]")
-                }
-            }
-        }
-    }
-}
+// impl fmt::Display for CmdChunk {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         match self {
+//             CmdChunk::Command(val) => write!(f, "{val}"),
+//             CmdChunk::Arg(val) => write!(f, "{val}"),
+//             CmdChunk::Chunk{content, required} => {
+//                 let content = content.to_string(); 
+//                 if *required {
+//                     write!(f, "<{content}>")
+//                 } else {
+//                     write!(f, "[{content}]")
+//                 }
+//             }
+//         }
+//     }
+// }
 
 #[derive(Debug, PartialEq)]
 pub struct CmdParser {

@@ -1,8 +1,24 @@
 use std::fmt;
 
+/// List of tood to implement for the lexer
+/// -----
+///
 /// TODO: add an "Intiger" token
 /// ---- 
 /// It starts with number, it is an intiger. Otherwise it is a string
+///
+/// TODO: add a delimiter "--" token
+/// ---
+/// example: cargo run -- arg
+///
+/// TODO: add an explicit input for a flag with equal
+/// ---
+/// example: command --option=23
+///
+/// TODO: add support for negative numbers
+/// ---
+/// example: command --option=-2
+///
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     LSq,

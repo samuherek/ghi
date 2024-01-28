@@ -1,6 +1,6 @@
 use super::parser::{CmdChunk, CmdParser};
 use super::lexer::{CmdLexer};
-use super::input_lexer;
+use super::input_lexer::InputCmdLexer;
 use super::input_lexer::Token;
 
 
@@ -11,12 +11,12 @@ fn match_schema(ast: &Vec<CmdChunk>, tokens: &Vec<Token>, ast_idx: usize, token_
 
     while curr_ast_idx < ast.len() && curr_token_idx < tokens.len() {
         match (&ast[curr_ast_idx], &tokens[curr_token_idx]) {
-            (CmdChunk::Command(cmd), Token::Input(word)) if cmd == word => {
+            (CmdChunk::Command(cmd), Token::Str(word)) if cmd == word => {
                 res.push((cmd.clone(), true));
                 curr_ast_idx += 1;
                 curr_token_idx += 1;
             },
-            (CmdChunk::Arg(cmd), Token::Input(word)) if cmd == word => {
+            (CmdChunk::Arg(cmd), Token::Str(word)) if cmd == word => {
                 res.push((cmd.clone(), true));
                 curr_ast_idx += 1;
                 curr_token_idx += 1;
@@ -90,7 +90,7 @@ mod tests {
 
         for (cmd, s) in tests {
             let ast = CmdParser::compile(cmd);
-            let input = input_lexer::lex(s);
+            let input = InputCmdLexer::compile(s);
             let matcher = match_schema(&ast, &input, 0, 0);
 
             for (val, correctness) in matcher {
@@ -103,7 +103,7 @@ mod tests {
     #[test]
     fn match_multi_item() {
         let ast = CmdParser::compile("git add");
-        let input = input_lexer::lex("git add");
+        let input = InputCmdLexer::compile("git add");
         let matcher = match_schema(&ast, &input, 0, 0);
         
         assert_eq!(matcher, vec![
@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn match_multi_item2() {
         let ast = CmdParser::compile("git add");
-        let input = input_lexer::lex("git commit");
+        let input = InputCmdLexer::compile("git commit");
         let matcher = match_schema(&ast, &input, 0, 0);
         
         assert_eq!(matcher, vec![

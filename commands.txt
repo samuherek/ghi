@@ -1,0 +1,137 @@
+Course: ls
+
+# To display everything in <dir>, excluding hidden files:
+ls <dir>
+
+# To display everything in <dir>, including hidden files:
+ls -a <dir>
+
+# To display all files, along with the size (with unit suffixes) and timestamp:
+ls -lh <dir>
+
+# To display files, sorted by size:
+ls -S <dir>
+
+# To display directories only:
+ls -d */ <dir>
+
+# To display directories only, include hidden:
+ls -d .*/ */ <dir>
+
+# To display all files sorted by changed date, most recent first:
+ls -ltc 
+
+# To display files sorted by create time:
+ls -lt
+
+# To display files in a single column:
+ls -1
+
+-----
+# Update
+brew update
+
+# Upgrade everything
+brew upgrade
+
+# Upgrade specific formula
+brew upgrade <formula>
+
+# Install formula
+brew install <formula>
+
+# Install cask
+brew install --cask <formula>
+
+# Uninstall
+brew uninstall <formula>
+
+# List installed formulae
+brew list
+
+# Fix
+brew doctor
+
+# Clean up
+brew cleanup
+
+----
+
+# To search a file for a pattern:
+grep <pattern> <file>
+
+# To perform a case-insensitive search (with line numbers):
+grep -in <pattern> <file>
+
+# To recursively grep for string <pattern> in <dir>:
+grep -R <pattern> <dir>
+
+# Read search patterns from a file (one per line):
+grep -f <pattern-file> <file>
+
+# Find lines NOT containing pattern:
+grep -v <pattern> <file>
+
+# Set how many lines to show before (-B) and after (-A) pattern:
+grep -B 3 -A 2 <pattern> <file>
+
+// The input value
+// used for literal values like commands, subcommands
+== Literal
+- value: String
+- required : Bool
+
+// The input value
+// used as a variable value like strings, paths, ...
+== Variable
+- name : String
+- type: String | Int
+- required : Bool
+// TODO: - multiple: Bool
+
+== FlagShort
+- value: Char
+- input: Option<Input>
+- required : Bool
+
+== FlagLong
+- value: String
+- input: Option<Input>
+- required : Bool
+
+== FlagCombo
+- values: Char[],
+- required : Bool
+
+== Or
+- lhs: Inp,
+- rhs: Inp,
+
+- [] // optional
+    - input ()
+- <> // required 
+    - chars // kind
+- - // short flag
+    - input (none, literal, input)
+- -- // long flag
+- chars // literal
+- | // equivalent
+-  
+
+----
+
+- Literal
+- Flag short lowercase char + input (literal, input)            // can have input
+- Flag short uppercase char + input                             // can have input
+- Flag short combined                                           // can not have input
+- Flag long                                                     // can have input
+// - Flag short multi char (lowercase char + uppercase char) - order matters // we don't support this for now
+- Flag short multi char (lowercase char + uppercase char) - order does not matter // can not have an input!
+- input required (kind) => string, number // 
+- input optional (kind) => string, number // 
+
+
+features:
+- you can use short or long flag 
+- 
+

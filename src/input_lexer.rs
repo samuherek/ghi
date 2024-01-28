@@ -16,7 +16,7 @@ pub enum Token {
     Int(usize) // TODO: not implemented yet
 }
 
-struct InputCmdLexer<'a > {
+pub struct InputCmdLexer<'a > {
     input: &'a str, 
     position: usize,
     read_position: usize,
@@ -24,7 +24,7 @@ struct InputCmdLexer<'a > {
 }
 
 impl<'a> InputCmdLexer<'a> {
-    fn compile(input: &'a str) -> Vec<Token> {
+    pub fn compile(input: &'a str) -> Vec<Token> {
         let mut tokens = Vec::new();
         let mut lexer = Self {
             input,
