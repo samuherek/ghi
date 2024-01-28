@@ -1,10 +1,19 @@
 
+///
+/// TODO: implement a delimiter "--"
+/// ---
+/// example: cargo run -- arg
+///
+/// TODO: implement an explicit flag input
+/// ---
+/// example: command --option=23
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     FlagShort(String),
+    FlagCombo(String),
     FlagLong(String),
-    Input(String),
-    Illegal,
+    Str(String),
+    Int(usize) // TODO: not implemented yet
 }
 
 struct InputCmdLexer<'a > {
@@ -15,7 +24,8 @@ struct InputCmdLexer<'a > {
 }
 
 impl<'a> InputCmdLexer<'a> {
-    fn new(input: &'a str) -> Self {
+    fn compile(input: &'a str) -> Vec<Token> {
+        let mut tokens = Vec::new();
         let mut lexer = Self {
             input,
             position: 0,
@@ -23,7 +33,12 @@ impl<'a> InputCmdLexer<'a> {
             ch: None
         };
         lexer.read_char();
-        return lexer;
+
+        while let Some(token) = lexer.next_token() {
+            tokens.push(token);
+        }
+
+        tokens
     }
 
     fn read_char(&mut self) {
@@ -38,68 +53,71 @@ impl<'a> InputCmdLexer<'a> {
 
     fn read_str(&mut self) -> String {
         let pos = self.position;
-        while self.ch.is_some_and(|x| x != ' ')  {
+        while self.peak_char().is_some_and(|x| x != ' ')  {
             self.read_char();
         }
-        return self.input[pos..self.position].to_string();
+        return self.input[pos..=self.position].to_string();
     }
 
     fn read_input(&mut self, quote: char) -> String {
         let pos = self.position;
-        while self.ch.is_some_and(|x| x != quote) {
+        while self.peak_char().is_some_and(|x| x != quote) {
             self.read_char(); 
         }
-        return self.input[pos..self.position].to_string();
+        return self.input[pos..=self.position].to_string();
     }
 
     fn skip_whitespace(&mut self) {
-        while self.ch.is_some_and(|x| x == ' ')  {
+        while self.ch == Some(' ')  {
             self.read_char();
         }
     }
-    fn has_next_token(&self) -> bool {
-        self.ch.is_some() 
-    }
+    // fn has_next_token(&self) -> bool {
+    //     self.ch.is_some() 
+    // }
 
-    fn next_token(&mut self) -> Token {
+    fn next_token(&mut self) -> Option<Token> {
         self.skip_whitespace();        
 
-        let token = match self.ch {
-            Some('"') => {
-                self.read_char();
-                let value = self.read_input('"');
-                self.read_char();
-                return Token::Input(value);
-            },
-            Some('\'') => {
-                self.read_char();
-                let value = self.read_input('\'');
-                self.read_char();
-                return Token::Input(value);
-            }
-            Some('-') => {
-                if self.peak_char() == Some('-') {
+        let res = if let Some(token) = self.ch {
+            match token {
+                '"' => {
                     self.read_char();
+                    let value = self.read_input('"');
                     self.read_char();
-                    let value = self.read_str(); 
-                    return Token::FlagLong(value)
-                } else {
+                    Some(Token::Str(value))
+                },
+                '\'' => {
                     self.read_char();
-                    let value = self.read_str(); 
-                    return Token::FlagShort(value)
+                    let value = self.read_input('\'');
+                    self.read_char();
+                    Some(Token::Str(value))
                 }
-            },
-            Some(_) => {
-                let value = self.read_str(); 
-                // TODO: might need to use "peak" instead of "read"
-                // so that we don't have to "return" which is inconsistent
-                // with the rest of the arms.
-                return Token::Input(value)
-            },
-            _ => Token::Illegal
+                '-' => {
+                    if self.peak_char() == Some('-') {
+                        self.read_char();
+                        self.read_char();
+                        let value = self.read_str(); 
+                        Some(Token::FlagLong(value))
+                    } else {
+                        self.read_char();
+                        let value = self.read_str(); 
+                        Some(Token::FlagShort(value))
+                    }
+                },
+                _ => {
+                    let value = self.read_str(); 
+                    // TODO: might need to use "peak" instead of "read"
+                    // so that we don't have to "return" which is inconsistent
+                    // with the rest of the arms.
+                    Some(Token::Str(value))
+                }
+            }
+        } else {
+            None
         };
         self.read_char();
-        return token;
+        res
     }
 }
 
@@ -117,17 +135,7 @@ fn is_str_letter(input: Option<char>) -> bool {
     }
 }
 
-pub fn lex(input: &str) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    let mut lexer = InputCmdLexer::new(&input);
 
-    while lexer.has_next_token() {
-        let token = lexer.next_token(); 
-        tokens.push(token);
-     }
-
-    return tokens;
-}
 
 #[cfg(test)]
 mod tests {
@@ -137,13 +145,13 @@ mod tests {
     fn lex() {
         let input = "display-message -p -t client-0 'Hello, World!'";
         let exp = vec![
-            Token::Input(String::from("display-message")),
+            Token::Str(String::from("display-message")),
             Token::FlagShort(String::from("p")),
             Token::FlagShort(String::from("t")),
-            Token::Input(String::from("client-0")),
-            Token::Input(String::from("Hello, World!")),
+            Token::Str(String::from("client-0")),
+            Token::Str(String::from("Hello, World!")),
         ];
-        let result = super::lex(&input);
+        let result = InputCmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
      
@@ -151,11 +159,11 @@ mod tests {
     fn cmd1() {
         let input = "capture-pane -t pane-1";
         let exp = vec![
-            Token::Input(String::from("capture-pane")),
+            Token::Str(String::from("capture-pane")),
             Token::FlagShort(String::from("t")),
-            Token::Input(String::from("pane-1")),
+            Token::Str(String::from("pane-1")),
         ];
-        let result = super::lex(&input);
+        let result = InputCmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
      
@@ -163,12 +171,12 @@ mod tests {
     fn cmd2() {
         let input = "save-buffer -b 1 /path/to/file.txt";
         let exp = vec![
-            Token::Input(String::from("save-buffer")),
+            Token::Str(String::from("save-buffer")),
             Token::FlagShort(String::from("b")),
-            Token::Input(String::from("1")),
-            Token::Input(String::from("/path/to/file.txt")),
+            Token::Str(String::from("1")),
+            Token::Str(String::from("/path/to/file.txt")),
         ];
-        let result = super::lex(&input);
+        let result = InputCmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -176,13 +184,13 @@ mod tests {
     fn cmd3() {
         let input = "paste-buffer -t pane-2 -b 5";
         let exp = vec![
-            Token::Input(String::from("paste-buffer")),
+            Token::Str(String::from("paste-buffer")),
             Token::FlagShort(String::from("t")),
-            Token::Input(String::from("pane-2")),
+            Token::Str(String::from("pane-2")),
             Token::FlagShort(String::from("b")),
-            Token::Input(String::from("5")),
+            Token::Str(String::from("5")),
         ];
-        let result = super::lex(&input);
+        let result = InputCmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 
@@ -190,15 +198,15 @@ mod tests {
     fn cmd4() {
         let input = "if-shell -b -t pane-3 \"test -f myfile.txt\" \"echo File exists\" \"echo File does not exist\"";
         let exp = vec![
-            Token::Input(String::from("if-shell")),
+            Token::Str(String::from("if-shell")),
             Token::FlagShort(String::from("b")),
             Token::FlagShort(String::from("t")),
-            Token::Input(String::from("pane-3")),
-            Token::Input(String::from("test -f myfile.txt")),
-            Token::Input(String::from("echo File exists")),
-            Token::Input(String::from("echo File does not exist")),
+            Token::Str(String::from("pane-3")),
+            Token::Str(String::from("test -f myfile.txt")),
+            Token::Str(String::from("echo File exists")),
+            Token::Str(String::from("echo File does not exist")),
         ];
-        let result = super::lex(&input);
+        let result = InputCmdLexer::compile(&input);
         assert_eq!(result, exp);
     }
 }
