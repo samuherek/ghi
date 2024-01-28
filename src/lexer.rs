@@ -1,4 +1,7 @@
 
+/// TODO: add an "Intiger" token
+/// ---- 
+/// It starts with number, it is an intiger. Otherwise it is a string
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     LSq,
@@ -6,6 +9,7 @@ pub enum Token {
     LAr, 
     RAr,
     FlagShort(String),
+    FlagCombo(String),
     FlagLong(String),
     Multiple,
     Or,
@@ -92,7 +96,13 @@ impl<'a> CmdLexer<'a> {
                         Some(Token::FlagLong(self.read_flag()))
                     } else {
                         self.read_char();
-                        Some(Token::FlagShort(self.read_flag()))
+                        let value = self.read_flag();
+
+                        if value.len() > 1 {
+                            Some(Token::FlagCombo(value))
+                        } else {
+                            Some(Token::FlagShort(value))
+                        }
                     }
                 },
                 '.' => {
@@ -101,7 +111,9 @@ impl<'a> CmdLexer<'a> {
                 },
                 '|' => Some(Token::Or),
                 'a'..='z' | 'A'..='Z' => Some(Token::Str(self.read_str())),
-                _ => Some(Token::Illegal(token))
+                c => {
+                    panic!("Could not parser {c} at position {p}", c = c, p = self.position);
+                }
             };
             self.read_char();
             token
@@ -170,7 +182,7 @@ mod tests {
             super::Token::RSq,
             super::Token::LAr,
             super::Token::RAr,
-            super::Token::FlagShort(String::from("fa")),
+            super::Token::FlagCombo(String::from("fa")),
             super::Token::LSq,
         ];
         let result = super::CmdLexer::compile(&input);
