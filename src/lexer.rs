@@ -1,3 +1,4 @@
+use std::fmt;
 
 /// TODO: add an "Intiger" token
 /// ---- 
@@ -14,7 +15,23 @@ pub enum Token {
     Multiple,
     Or,
     Str(String),
-    Illegal(char),
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Token::LSq => write!(f, "["),
+            Token::RSq => write!(f, "]"),
+            Token::LAr => write!(f, "<"),
+            Token::RAr => write!(f, ">"),
+            Token::FlagShort(val) => write!(f, "-{val}"),
+            Token::FlagCombo(val) => write!(f, "-{val}"),
+            Token::FlagLong(val) => write!(f, "--{val}"),
+            Token::Multiple => write!(f, "..."),
+            Token::Or => write!(f, "|"),
+            Token::Str(val) => write!(f, "{val}"),
+        }
+    }
 }
 
 pub struct CmdLexer<'a > {
