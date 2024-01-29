@@ -23,7 +23,15 @@ $ ghi
 
 ### TODO:
 
-[ ] interactive add to add some context to the command to save
+[ ] interactive add of a command 
+     - it will trigger an editor to add description
+     - it will trigger an editor to provide translation of the command into a command language "ghi" uses internally
+Example:
+`git push --set-upstream origin feature/whatever-awesome-stuff`
+should be converted to this
+`git push --set-upstrem origin <branch>` 
+This is to remove any kind of sensitive information, and it makes it much easier for ghi to parse it correctly and provide test feedback like duolingo
+
 
 [ ] basic flashcard -> I'm working on this now
     - Creating a comperator function that walks the ASTs and compares them. 
