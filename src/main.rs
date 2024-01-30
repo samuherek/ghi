@@ -19,6 +19,7 @@ use tempfile::NamedTempFile;
 use std::process::Command;
 use serde::Deserialize;
 use serde_json;
+use parser::CmdParser;
 
 #[derive(Parser)]
 #[command(author = "Sam Uherek <samuherekbiz@gmail.com>")]
@@ -34,7 +35,8 @@ pub enum Commands {
     Add { value: Option<String> },
     List, 
     Flash,
-    Tmux
+    Tmux,
+    Test
 }
 
 #[derive(PartialEq)]
@@ -339,6 +341,9 @@ fn main() -> anyhow::Result<()>{
             for item in store.db_take(None) {
                 println!("{}", item);
             };
+        },
+        Some(Commands::Test) => {
+            CmdParser::compile("git add [-f]");
         },
         Some(Commands::Tmux) => {
             let data = fs::read_to_string(PathBuf::from("tmux.json")).unwrap();

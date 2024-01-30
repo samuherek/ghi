@@ -1,13 +1,13 @@
 use crate::lexer::{Token, CmdLexer};
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 enum BinaryOp {
     Or
 }
 
-#[derive(Debug, PartialEq)]
-enum VariableType {
+#[derive(Debug, PartialEq, Clone)]
+enum Variable {
     String,
     Int
 }
@@ -45,25 +45,25 @@ enum VariableType {
 /// == Or
 /// - lhs: Inp,
 /// - rhs: Inp,
-#[derive(Debug, PartialEq)]
-pub enum CmdChunk {
+#[derive(Debug, PartialEq, Clone)]
+pub enum CmdWord {
     Literal {
         value: String,
         required: bool
     },
     Variable {
         name: String,
-        kind: VariableType,
+        kind: Variable,
         required: bool
     },
     FlagShort {
         value: char,
-        input: Box<Option<CmdChunk>>,
+        input: Box<Option<CmdWord>>,
         required: bool
     },
     FlagLong {
         value: String,
-        input: Box<Option<CmdChunk>>,
+        input: Box<Option<CmdWord>>,
         required: bool
     },
     FlagCombo {
@@ -72,17 +72,17 @@ pub enum CmdChunk {
     },
     BinaryOp {
         op:  BinaryOp,
-        lhs: Box<CmdChunk>,
-        rhs: Box<CmdChunk>,
+        lhs: Box<CmdWord>,
+        rhs: Box<CmdWord>,
     }
 }
 
-// impl fmt::Display for CmdChunk {
+// impl fmt::Display for CmdWord {
 //     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 //         match self {
-//             CmdChunk::Command(val) => write!(f, "{val}"),
-//             CmdChunk::Arg(val) => write!(f, "{val}"),
-//             CmdChunk::Chunk{content, required} => {
+//             CmdWord::Command(val) => write!(f, "{val}"),
+//             CmdWord::Arg(val) => write!(f, "{val}"),
+//             CmdWord::Chunk{content, required} => {
 //                 let content = content.to_string(); 
 //                 if *required {
 //                     write!(f, "<{content}>")
@@ -104,7 +104,7 @@ pub struct CmdParser {
 }
 
 impl CmdParser {
-    pub fn compile(input: &str) -> Vec<CmdChunk> {
+    pub fn compile(input: &str) -> Vec<CmdWord> {
         let lexer = CmdLexer::compile(input);
         let mut parser =  Self {
             lexer,
@@ -119,10 +119,17 @@ impl CmdParser {
 
         let mut ast = Vec::new();
         while parser.curr_token.is_some() {
-           let exp = parser.parse_exp(true);
-           ast.push(exp);
-           parser.next_token();
+            for item in parser.parse_exp(true) {
+                println!("next round {:?}", item);
+                if let Some(exp) = item {
+                    println!("exp:: {:?}",exp);
+                    ast.push(exp);
+                }
+            }
+            parser.next_token();
         };
+
+        println!("{:?}", ast);
 
        return ast;
     }
@@ -134,52 +141,69 @@ impl CmdParser {
         self.curr_position = self.curr_position + 1;
     }
 
-    fn parse_exp(&mut self, required: bool) -> CmdChunk {
-        let token = self.curr_token.clone().expect("Cluld not find token in the next token");
+    fn read_literal(&self) -> CmdWord {
+        if let Some(Token::Str(value)) = &self.curr_token {
+            CmdWord::Literal {
+                value: value.to_string(),
+                required: true,
+            }
+        } else {
+            panic!("Called parse literal without string");
+        }
+    }
 
-        let token = match token {
+    fn read_variable(&self, required: bool) -> CmdWord {
+        if let Some(Token::Str(value)) = &self.curr_token {
+            CmdWord::Variable {
+                name: value.to_string(),
+                kind: Variable::String,
+                required,
+            }
+        } else {
+            panic!("Called parse variable without string");
+        }
+    }
+
+    fn parse_exp(&mut self, required: bool) -> Vec<Option<CmdWord>> {
+        let token = self.curr_token.clone().expect("Cluld not find token in the next token");
+        let mut words = Vec::new();
+
+        match token {
             // It is always literal in this case
-            Token::Str(val) => {
-                parse_input(&val, required, false)
+            Token::Str(_) => {
+                words.push(Some(self.read_literal()));
             },
             // if next token is `=` we have a required input (depth + 1)
             // if next token is `LSq` we have an input optional (depth + 1)
             // if next token is `LAr` we have an input required (depth + 1)
             Token::FlagShort(val) => { 
-                let mut input: Option<CmdChunk> = None;
+                let mut input: Option<CmdWord> = None;
 
-                match self.peak_token.as_ref() {
-                    Some(Token::LAr) => {
-                        input = Some(self.parse_exp(required));
-                    },
-                    _ => {}
-                };
+                if self.peak_token == Some(Token::LAr) {
+                    input = self.parse_exp(true).iter().flatten().next().cloned();
+                }
 
-                CmdChunk::FlagShort {
+                words.push(Some(CmdWord::FlagShort {
                     value: val.chars().next().expect("Short flag has to have a flag name char"),
                     input: Box::new(input),
                     required 
-                }
+                }));
             },
             // if next token is `=` we have a required input (depth + 1)
             // if next token is `LSq` we have an input optional (depth + 1)
             // if next token is `LAr` we have an input required (depth + 1)
             Token::FlagLong(val) => {
-                let mut input: Option<CmdChunk> = None;
+                let mut input: Option<CmdWord> = None;
 
-                match self.peak_token.as_ref() {
-                    Some(Token::LAr) => {
-                        input = Some(self.parse_exp(true));
-                    },
-                    _ => {}
-                };
+                if self.peak_token == Some(Token::LAr) {
+                    input = self.parse_exp(true).iter().flatten().next().cloned();
+                }
 
-                
-                CmdChunk::FlagLong {
+                words.push(Some(CmdWord::FlagLong {
                     value: val.clone(),
                     input: Box::new(input),
                     required
-                }
+                }));
             },
             // we take the val and split it into smaller tags
             // it can not have any input
@@ -188,26 +212,38 @@ impl CmdParser {
                     panic!("Flag combo does not have enough flags");
                 }
                 
-                CmdChunk::FlagCombo {
+                words.push(Some(CmdWord::FlagCombo {
                     values: val.chars().collect(),
                     required
-                }
+                }));
             },
             // call self.parse_exp until the next token is RSq
             Token::LSq => {
-                self.parse_exp(false)
+                self.next_token();
+
+                while self.curr_token != Some(Token::RSq) {
+                    for item in self.parse_exp(false) {
+                        words.push(item);
+                    }
+
+                    self.next_token();
+
+                    if self.curr_token == None {
+                        panic!("LSq did not find closing tag and run out of tokens");
+                    }
+                }
             },
             // call self.parse_exp until the next token is RAr
             Token::LAr => {
                 self.next_token();
+                words.push(Some(self.read_variable(true)));
+                self.next_token();
 
-                if let Some(Token::Str(val)) = &self.curr_token {
-                    let output = parse_input(&val, true, true);
-                    self.next_token(); 
-                    output
-                } else {
-                    panic!("Next token is not a string but {:?}", self.curr_token);
+                if self.curr_token != Some(Token::RAr) {
+                    panic!("LAr can onyl take one argument and needs closing tag '>' ");
                 }
+
+                self.next_token();
             },
             Token::Or => {
                 // take the previous exp and combine it with the next exp
@@ -222,71 +258,19 @@ impl CmdParser {
             }
         };
 
-        token
-
-        // match token {
-        //     Token::Str(val) => CmdChunk::Literal { 
-        //         value: val.clone(), 
-        //         required: true 
-        //     },
-        //     Token::FlagShort(val) => CmdChunk::FlagShort { 
-        //         val: val.chars().next().expect("Has to have some flag identifier"),
-        //         input: self.parse_chunk(),
-        //         values: val.chars().map(|x| x.to_string()).collect() 
-        //     },
-        //     Token::FlagLong(val) => CmdChunk::Flag{ 
-        //         values: vec![val.clone()] 
-        //     },
-        //     Token::LAr => {
-        //         let mut content = Vec::new();
-        //         self.next_token();
-        //         loop {
-        //             content.push(self.parse_chunk());
-        //             self.next_token();
-        //             if let Some(Token::RAr) = self.curr_token {
-        //                 break;
-        //             }
-        //         }
-        //
-        //         CmdChunk::Chunk {
-        //             content,
-        //             required: true
-        //         }
-        //     },
-        //     Token::LSq => {
-        //         let mut content = Vec::new();
-        //         self.next_token();
-        //
-        //         loop {
-        //             content.push(self.parse_chunk());
-        //             self.next_token();
-        //             if let Some(Token::RSq) = self.curr_token {
-        //                 break;
-        //             }
-        //         }
-        //
-        //         CmdChunk::Chunk {
-        //             content,
-        //             required: false
-        //         }
-        //     },
-        //     // TODO: It reaches this at some point when the string is empty
-        //     v => {
-        //         panic!("Got unknow token {:?}", v);
-        //     }
-        // }
+        words
     }
 
-    fn parse_input(value: &str, required: bool, variable: bool) -> CmdChunk {
+    fn parse_input(value: &str, required: bool, variable: bool) -> CmdWord {
         let value = value.to_string();
         if variable {
-            CmdChunk::Variable {
+            CmdWord::Variable {
                 name: value,
-                kind: VariableType::String,
+                kind: Variable::String,
                 required: true
             }
         } else {
-            CmdChunk::Literal {
+            CmdWord::Literal {
                 value,
                 required,
             }
@@ -294,16 +278,16 @@ impl CmdParser {
     }
 }
 
-fn parse_input(value: &str, required: bool, variable: bool) -> CmdChunk {
+fn parse_input(value: &str, required: bool, variable: bool) -> CmdWord {
     let value = value.to_string();
     if variable {
-        CmdChunk::Variable {
+        CmdWord::Variable {
             name: value,
-            kind: VariableType::String,
+            kind: Variable::String,
             required: true
         }
     } else {
-        CmdChunk::Literal {
+        CmdWord::Literal {
             value,
             required,
         }
@@ -351,7 +335,7 @@ mod tests {
         let parser = CmdParser::compile("git");
 
         assert_eq!(parser, vec![
-                   CmdChunk::Literal {
+                   CmdWord::Literal {
                        value: "git".to_string(),
                        required: true
                    }
@@ -363,11 +347,11 @@ mod tests {
         let parser = CmdParser::compile("git add");
 
         assert_eq!(parser, vec![
-                   CmdChunk::Literal {
+                   CmdWord::Literal {
                        value: "git".to_string(),
                        required: true
                    },
-                   CmdChunk::Literal {
+                   CmdWord::Literal {
                        value: "add".to_string(),
                        required: true
                    }
@@ -379,31 +363,112 @@ mod tests {
         let parser = CmdParser::compile("git add <path>");
 
         assert_eq!(parser, vec![
-                   CmdChunk::Literal {
+                   CmdWord::Literal {
                        value: "git".to_string(),
                        required: true
                    },
-                   CmdChunk::Literal {
+                   CmdWord::Literal {
                        value: "add".to_string(),
                        required: true
                    },
-                   CmdChunk::Variable {
+                   CmdWord::Variable {
                        name: "path".to_string(),
-                       kind: VariableType::String,
+                       kind: Variable::String,
                        required: true
                    }
         ]);
     }
 
+    #[test]
+    fn command_with_short_flag() {
+        let parser = CmdParser::compile("some command -f");
 
+        assert_eq!(parser, vec![
+                   CmdWord::Literal {
+                       value: "some".to_string(),
+                       required: true
+                   },
+                   CmdWord::Literal {
+                       value: "command".to_string(),
+                       required: true
+                   },
+                   CmdWord::FlagShort {
+                       value: 'f',
+                       input: Box::new(None),
+                       required: true
+                   }
+        ]);
+    }
+
+    #[test]
+    fn command_with_long_flag() {
+        let parser = CmdParser::compile("some command --depth");
+
+        assert_eq!(parser, vec![
+                   CmdWord::Literal {
+                       value: "some".to_string(),
+                       required: true
+                   },
+                   CmdWord::Literal {
+                       value: "command".to_string(),
+                       required: true
+                   },
+                   CmdWord::FlagLong {
+                       value: "depth".to_string(),
+                       input: Box::new(None),
+                       required: true
+                   }
+        ]);
+    }
+
+    #[test]
+    fn command_with_combo_flag() {
+        let parser = CmdParser::compile("some command -la");
+
+        assert_eq!(parser, vec![
+                   CmdWord::Literal {
+                       value: "some".to_string(),
+                       required: true
+                   },
+                   CmdWord::Literal {
+                       value: "command".to_string(),
+                       required: true
+                   },
+                   CmdWord::FlagCombo {
+                       values: vec!['l', 'a'],
+                       required: true
+                   }
+        ]);
+    }
+
+    #[test]
+    fn command_with_optional_short_flag() {
+        let parser = CmdParser::compile("some command [-l]");
+
+        assert_eq!(parser, vec![
+                   CmdWord::Literal {
+                       value: "some".to_string(),
+                       required: true
+                   },
+                   CmdWord::Literal {
+                       value: "command".to_string(),
+                       required: true
+                   },
+                   CmdWord::FlagShort {
+                       value: 'l',
+                       input: Box::new(None),
+                       required: false
+                   }
+        ]);
+    }
 
     // #[test]
     // fn parse_optional_block() {
     //     let parser = CmdParser::compile("[file]");
     //
     //     assert_eq!(parser, vec![
-    //                CmdChunk::Chunk{
-    //                    content: vec![CmdChunk::Arg(String::from("file"))],
+    //                CmdWord::Chunk{
+    //                    content: vec![CmdWord::Arg(String::from("file"))],
     //                    required: false
     //                },
     //     ]);
@@ -414,12 +479,12 @@ mod tests {
     //     let parser = CmdParser::compile("[file] [directory]");
     //
     //     assert_eq!(parser, vec![
-    //         CmdChunk::Chunk {
-    //             content: vec![CmdChunk::Arg(String::from("file"))],
+    //         CmdWord::Chunk {
+    //             content: vec![CmdWord::Arg(String::from("file"))],
     //             required: false,
     //         },
-    //         CmdChunk::Chunk{
-    //             content: vec![CmdChunk::Arg(String::from("directory"))],
+    //         CmdWord::Chunk{
+    //             content: vec![CmdWord::Arg(String::from("directory"))],
     //             required: false,
     //         },
     //     ]);
@@ -430,12 +495,12 @@ mod tests {
     //     let parser = CmdParser::compile("<file> <directory>");
     //
     //     assert_eq!(parser, vec![
-    //         CmdChunk::Chunk{
-    //             content: vec![CmdChunk::Arg(String::from("file"))],
+    //         CmdWord::Chunk{
+    //             content: vec![CmdWord::Arg(String::from("file"))],
     //             required: true
     //         },
-    //         CmdChunk::Chunk{
-    //             content: vec![CmdChunk::Arg(String::from("directory"))],
+    //         CmdWord::Chunk{
+    //             content: vec![CmdWord::Arg(String::from("directory"))],
     //             required: true
     //         },
     //     ]);
@@ -446,13 +511,13 @@ mod tests {
     //     let parser = CmdParser::compile("-f -r -rf");
     //
     //     assert_eq!(parser, vec![
-    //         CmdChunk::Flag{
+    //         CmdWord::Flag{
     //             values: vec![String::from("f")]
     //         },
-    //         CmdChunk::Flag{
+    //         CmdWord::Flag{
     //             values: vec![String::from("r")]
     //         },
-    //         CmdChunk::Flag{
+    //         CmdWord::Flag{
     //             values: vec![String::from("r"), String::from("f")]
     //         },
     //     ]);
@@ -463,10 +528,10 @@ mod tests {
     //     let parser = CmdParser::compile("--hey --depth");
     //
     //     assert_eq!(parser, vec![
-    //         CmdChunk::Flag{
+    //         CmdWord::Flag{
     //             values: vec![String::from("hey")]
     //         },
-    //         CmdChunk::Flag{
+    //         CmdWord::Flag{
     //             values: vec![String::from("depth")]
     //         },
     //     ]);
