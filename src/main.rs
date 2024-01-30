@@ -343,7 +343,13 @@ fn main() -> anyhow::Result<()>{
             };
         },
         Some(Commands::Test) => {
-            CmdParser::compile("git add [-f]");
+            for item in vec![
+                "some cmd [-f]",
+                "some cmd [-f <value>]",
+            ] {
+                println!("{}", item);
+                CmdParser::compile(item);
+            }
         },
         Some(Commands::Tmux) => {
             let data = fs::read_to_string(PathBuf::from("tmux.json")).unwrap();
