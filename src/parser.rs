@@ -2,12 +2,12 @@ use crate::lexer::{Token, CmdLexer};
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
-enum BinaryOp {
+pub enum BinaryOp {
     Or
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum Variable {
+pub enum Variable {
     String,
     Int
 }
@@ -16,31 +16,26 @@ enum Variable {
 ///
 /// The input value
 /// used for literal values like commands, subcommands
-/// == Literal
-/// - value: String
-/// - required : Bool
+/// == Literal{
+///  - value : String
 ///
 /// The input value
 /// used as a variable value like strings, paths, ...
 /// == Variable
 /// - name : String
 /// - type: String | Int
-/// - required : Bool
 /// TODO: - multiple: Bool
 ///
 /// == FlagShort
 /// - value: Char
 /// - input: Option<Input>
-/// - required : Bool
 ///
 /// == FlagLong
 /// - value: String
 /// - input: Option<Input>
-/// - required : Bool
 ///
 /// == FlagCombo
 /// - values: Char[],
-/// - required : Bool
 ///
 /// == Or
 /// - lhs: Inp,
@@ -49,26 +44,21 @@ enum Variable {
 pub enum CmdWord {
     Literal {
         value: String,
-        required: bool
     },
     Variable {
         name: String,
         kind: Variable,
-        required: bool
     },
     FlagShort {
         value: char,
         input: Box<Option<CmdWord>>,
-        required: bool
     },
     FlagLong {
         value: String,
         input: Box<Option<CmdWord>>,
-        required: bool
     },
     FlagCombo {
         values: Vec<char>,
-        required: bool
     },
     BinaryOp {
         op:  BinaryOp,
@@ -77,22 +67,35 @@ pub enum CmdWord {
     }
 }
 
-// impl fmt::Display for CmdWord {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         match self {
-//             CmdWord::Command(val) => write!(f, "{val}"),
-//             CmdWord::Arg(val) => write!(f, "{val}"),
-//             CmdWord::Chunk{content, required} => {
-//                 let content = content.to_string(); 
-//                 if *required {
-//                     write!(f, "<{content}>")
-//                 } else {
-//                     write!(f, "[{content}]")
-//                 }
-//             }
-//         }
-//     }
-// }
+impl fmt::Display for CmdWord {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CmdWord::Literal{value} => write!(f, "{value}"),
+            CmdWord::Variable{ name, .. } => write!(f, "<{name}>"),
+            CmdWord::FlagShort{ value, input } => {
+                if let Some(input) = input.as_ref() {
+                    write!(f, "-{value} <{input}>")
+                } else {
+                    write!(f, "-{value}")
+                }
+            },
+            CmdWord::FlagLong{ value, input } => {
+                if let Some(input) = input.as_ref() {
+                    write!(f, "--{value} <{input}>")
+                } else {
+                    write!(f, "--{value}")
+                }
+            },
+            CmdWord::FlagCombo{ values } => {
+                let flag: String = values.iter().collect();
+                write!(f, "-{flag}")
+            },
+            CmdWord::BinaryOp{ .. } => {
+                write!(f, "unimplemented")
+            }
+        }
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub struct CmdParser {
@@ -119,7 +122,7 @@ impl CmdParser {
 
         let mut ast = Vec::new();
         while parser.curr_token.is_some() {
-            for item in parser.parse_exp(true) {
+            for item in parser.parse_exp() {
                  // println!("next round {:?}", item);
                 if let Some(exp) = item {
                      // println!("exp:: {:?}",exp);
@@ -145,26 +148,24 @@ impl CmdParser {
         if let Some(Token::Str(value)) = &self.curr_token {
             CmdWord::Literal {
                 value: value.to_string(),
-                required: true,
             }
         } else {
             panic!("Called parse literal without string");
         }
     }
 
-    fn read_variable(&self, required: bool) -> CmdWord {
+    fn read_variable(&self) -> CmdWord {
         if let Some(Token::Str(value)) = &self.curr_token {
             CmdWord::Variable {
                 name: value.to_string(),
                 kind: Variable::String,
-                required,
             }
         } else {
             panic!("Called parse variable without string");
         }
     }
 
-    fn parse_exp(&mut self, required: bool) -> Vec<Option<CmdWord>> {
+    fn parse_exp(&mut self) -> Vec<Option<CmdWord>> {
         let token = self.curr_token.clone().expect("Cluld not find token in the next token");
         let mut words = Vec::new();
 
@@ -181,13 +182,12 @@ impl CmdParser {
 
                 if self.peak_token == Some(Token::LAr) {
                     self.next_token();
-                    input = self.parse_exp(true).iter().flatten().next().cloned();
+                    input = self.parse_exp().iter().flatten().next().cloned();
                 }
 
                 words.push(Some(CmdWord::FlagShort {
                     value: val.chars().next().expect("Short flag has to have a flag name char"),
                     input: Box::new(input),
-                    required 
                 }));
             },
             // if next token is `=` we have a required input (depth + 1)
@@ -198,13 +198,12 @@ impl CmdParser {
 
                 if self.peak_token == Some(Token::LAr) {
                     self.next_token();
-                    input = self.parse_exp(true).iter().flatten().next().cloned();
+                    input = self.parse_exp().iter().flatten().next().cloned();
                 }
 
                 words.push(Some(CmdWord::FlagLong {
                     value: val.clone(),
                     input: Box::new(input),
-                    required
                 }));
             },
             // we take the val and split it into smaller tags
@@ -216,33 +215,39 @@ impl CmdParser {
                 
                 words.push(Some(CmdWord::FlagCombo {
                     values: val.chars().collect(),
-                    required
                 }));
-            },
-            // call self.parse_exp until the next token is RSq
-            Token::LSq => {
-                while self.peak_token != Some(Token::RSq) {
-                    self.next_token();
-                    for item in self.parse_exp(false) {
-                        words.push(item);
-                    }
-                }
-                self.next_token();
-
-                if self.curr_token != Some(Token::RSq) {
-                    panic!("LSq did not find closing tag and run out of tokens");
-                }
             },
             // call self.parse_exp until the next token is RAr
             Token::LAr => {
                 self.next_token();
-                words.push(Some(self.read_variable(true)));
+                if let Some(Token::Str(value)) = &self.curr_token {
+                    words.push(Some(CmdWord::Variable {
+                        name: value.to_string(),
+                        kind: Variable::String,
+                    }));
+                } else {
+                    panic!("Called parse variable without string");
+                }
                 self.next_token();
 
                 if self.curr_token != Some(Token::RAr) {
                     panic!("LAr can onyl take one argument and needs closing tag '>' ");
                 }
             },
+            // call self.parse_exp until the next token is RSq
+            // Token::LSq => {
+            //     while self.peak_token != Some(Token::RSq) {
+            //         self.next_token();
+            //         for item in self.parse_exp() {
+            //             words.push(item);
+            //         }
+            //     }
+            //     self.next_token();
+            //
+            //     if self.curr_token != Some(Token::RSq) {
+            //         panic!("LSq did not find closing tag and run out of tokens");
+            //     }
+            // },
             Token::Or => {
                 // take the previous exp and combine it with the next exp
                 todo!();
@@ -257,38 +262,6 @@ impl CmdParser {
         };
 
         words
-    }
-
-    fn parse_input(value: &str, required: bool, variable: bool) -> CmdWord {
-        let value = value.to_string();
-        if variable {
-            CmdWord::Variable {
-                name: value,
-                kind: Variable::String,
-                required: true
-            }
-        } else {
-            CmdWord::Literal {
-                value,
-                required,
-            }
-        }
-    }
-}
-
-fn parse_input(value: &str, required: bool, variable: bool) -> CmdWord {
-    let value = value.to_string();
-    if variable {
-        CmdWord::Variable {
-            name: value,
-            kind: Variable::String,
-            required: true
-        }
-    } else {
-        CmdWord::Literal {
-            value,
-            required,
-        }
     }
 }
 
@@ -335,7 +308,6 @@ mod tests {
         assert_eq!(parser, vec![
                    CmdWord::Literal {
                        value: "git".to_string(),
-                       required: true
                    }
         ]);
     }
@@ -347,11 +319,9 @@ mod tests {
         assert_eq!(parser, vec![
                    CmdWord::Literal {
                        value: "git".to_string(),
-                       required: true
                    },
                    CmdWord::Literal {
                        value: "add".to_string(),
-                       required: true
                    }
         ]);
     }
@@ -363,16 +333,13 @@ mod tests {
         assert_eq!(parser, vec![
                    CmdWord::Literal {
                        value: "git".to_string(),
-                       required: true
                    },
                    CmdWord::Literal {
                        value: "add".to_string(),
-                       required: true
                    },
                    CmdWord::Variable {
                        name: "path".to_string(),
                        kind: Variable::String,
-                       required: true
                    }
         ]);
     }
@@ -384,16 +351,13 @@ mod tests {
         assert_eq!(parser, vec![
                    CmdWord::Literal {
                        value: "some".to_string(),
-                       required: true
                    },
                    CmdWord::Literal {
                        value: "command".to_string(),
-                       required: true
                    },
                    CmdWord::FlagShort {
                        value: 'f',
                        input: Box::new(None),
-                       required: true
                    }
         ]);
     }
@@ -405,20 +369,16 @@ mod tests {
         assert_eq!(parser, vec![
                    CmdWord::Literal {
                        value: "some".to_string(),
-                       required: true
                    },
                    CmdWord::Literal {
                        value: "command".to_string(),
-                       required: true
                    },
                    CmdWord::FlagShort {
                        value: 'f',
                        input: Box::new(Some(CmdWord::Variable {
                             name: "value".to_string(),
                             kind: Variable::String, 
-                            required: true
                        })),
-                       required: true
                    }
         ]);
     }
@@ -430,16 +390,13 @@ mod tests {
         assert_eq!(parser, vec![
                    CmdWord::Literal {
                        value: "some".to_string(),
-                       required: true
                    },
                    CmdWord::Literal {
                        value: "command".to_string(),
-                       required: true
                    },
                    CmdWord::FlagLong {
                        value: "depth".to_string(),
                        input: Box::new(None),
-                       required: true
                    }
         ]);
     }
@@ -451,63 +408,12 @@ mod tests {
         assert_eq!(parser, vec![
                    CmdWord::Literal {
                        value: "some".to_string(),
-                       required: true
                    },
                    CmdWord::Literal {
                        value: "command".to_string(),
-                       required: true
                    },
                    CmdWord::FlagCombo {
                        values: vec!['l', 'a'],
-                       required: true
-                   }
-        ]);
-    }
-
-    #[test]
-    fn command_with_optional_short_flag() {
-        let parser = CmdParser::compile("some command [-l]");
-
-        assert_eq!(parser, vec![
-                   CmdWord::Literal {
-                       value: "some".to_string(),
-                       required: true
-                   },
-                   CmdWord::Literal {
-                       value: "command".to_string(),
-                       required: true
-                   },
-                   CmdWord::FlagShort {
-                       value: 'l',
-                       input: Box::new(None),
-                       required: false
-                   }
-        ]);
-    }
-
-    #[test]
-    fn cmd_and_optional_short_flag_with_input() {
-        let parser = CmdParser::compile("some command [-l <value>]");
-
-        assert_eq!(parser, vec![
-                   CmdWord::Literal {
-                       value: "some".to_string(),
-                       required: true
-                   },
-                   CmdWord::Literal {
-                       value: "command".to_string(),
-                       required: true
-                   },
-                   CmdWord::FlagShort {
-                       value: 'l',
-                       input: Box::new(Some(
-                            CmdWord::Variable {
-                                name: "value".to_string(),
-                                kind: Variable::String,
-                                required: true
-                            }
-                       )),
-                       required: false
                    }
         ]);
     }
