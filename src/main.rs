@@ -369,7 +369,7 @@ fn main() -> anyhow::Result<()>{
                 match stdin().read_line(&mut input) {
                     Ok(_) => {
                         let ast = CmdParser::compile(cmd.1);
-                        let in_lex = InputCmdLexer::compile(&input);
+                        let in_lex = InputCmdLexer::compile(&input.trim());
                         let matcher = match_schema(&ast, &in_lex, 0, 0);
 
                         for (value, is_match) in matcher {

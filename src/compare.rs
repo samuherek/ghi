@@ -78,6 +78,7 @@ pub fn match_schema(ast: &Vec<CmdWord>, tokens: &Vec<Token>, ast_idx: usize, tok
     let mut token_idx = token_idx;
     let mut res: Vec<(String, bool)> = Vec::new();
 
+
     while ast_idx < ast.len() && token_idx < tokens.len() {
         let cmd = &ast[ast_idx];
         let token = &tokens[token_idx];
@@ -85,6 +86,11 @@ pub fn match_schema(ast: &Vec<CmdWord>, tokens: &Vec<Token>, ast_idx: usize, tok
         match (cmd, token) {
             (CmdWord::Literal{value}, Token::Str(word)) => {
                 res.push((cmd.to_string(), value == word));
+                ast_idx += 1;
+                token_idx += 1;
+            },
+            (CmdWord::Variable{..}, Token::Str(word)) => {
+                res.push((word.clone(), true));
                 ast_idx += 1;
                 token_idx += 1;
             },

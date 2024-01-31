@@ -74,14 +74,14 @@ impl fmt::Display for CmdWord {
             CmdWord::Variable{ name, .. } => write!(f, "<{name}>"),
             CmdWord::FlagShort{ value, input } => {
                 if let Some(input) = input.as_ref() {
-                    write!(f, "-{value} <{input}>")
+                    write!(f, "-{value} {input}")
                 } else {
                     write!(f, "-{value}")
                 }
             },
             CmdWord::FlagLong{ value, input } => {
                 if let Some(input) = input.as_ref() {
-                    write!(f, "--{value} <{input}>")
+                    write!(f, "--{value} {input}")
                 } else {
                     write!(f, "--{value}")
                 }
@@ -132,7 +132,7 @@ impl CmdParser {
             parser.next_token();
         };
 
-        println!("AST::: {:?}", ast);
+        // println!("AST::: {:?}", ast);
 
        return ast;
     }
