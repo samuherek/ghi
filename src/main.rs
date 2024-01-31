@@ -3,7 +3,7 @@ mod debug;
 mod lexer;
 mod parser;
 mod input_lexer;
-//mod compare;
+mod compare;
 
 use clap::{Parser, Subcommand};
 use rand::seq::SliceRandom;
@@ -344,18 +344,13 @@ fn main() -> anyhow::Result<()>{
         },
         Some(Commands::Test) => {
             for item in vec![
-                "some cmd [-f]",
-                "some cmd [-f <value>]",
-                "some cmd [--depth]",
-                "some cmd [--depth <value>]",
-                "some cmd [--depth <value>] <path>",
-                "some cmd [--depth <value>] [-f]",
                 "some cmd --depth -f",
                 "some cmd -la",
                 "some <path> <path>",
             ] {
                 println!("{}", item);
-                CmdParser::compile(item);
+                let res = CmdParser::compile(item).iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ");
+                println!("{res}");
             }
         },
         Some(Commands::Tmux) => {

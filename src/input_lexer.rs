@@ -1,3 +1,4 @@
+use std::fmt;
 
 ///
 /// TODO: implement a delimiter "--"
@@ -14,6 +15,21 @@ pub enum Token {
     FlagLong(String),
     Str(String),
     Int(usize) // TODO: not implemented yet
+}
+
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Token::FlagShort(val) => write!(f, "-{val}"),
+            Token::FlagCombo(val) => {
+                let flag: String = val.iter().collect();
+                write!(f, "-{flag}")
+            },
+            Token::FlagLong(val) => write!(f, "--{val}"),
+            Token::Str(val) => write!(f, "{val}"),
+            Token::Int(val) => write!(f, "{val}")
+        }
+    }
 }
 
 pub struct InputCmdLexer<'a > {
