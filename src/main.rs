@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 use rand::seq::SliceRandom;
 use crossterm::{execute, style, cursor};
 use crossterm::terminal::{self, EnterAlternateScreen, Clear, ClearType, LeaveAlternateScreen};
-use std::io::{self, stdout, Write, Read};
+use std::io::{self, stdout, stdin, Write, Read};
 use std::path::PathBuf;
 use std::{fs, env};
 use crossterm::QueueableCommand;
@@ -345,24 +345,43 @@ fn main() -> anyhow::Result<()>{
             };
         },
         Some(Commands::Test) => {
-        //     for item in vec![
-        //         "some cmd --depth -f",
-        //         "some cmd -la",
-        //         "some <path> <path>",
-        //     ] {
-        //         println!("{}", item);
-        //         let res = CmdParser::compile(item).iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ");
-        //         println!("{res}");
-        //     }
-        // 
-            let ast = CmdParser::compile(&"git -l <path>");
-            let input = InputCmdLexer::compile(&"git -l");
-            let matcher = match_schema(&ast, &input, 0, 0);
+            let data = fs::read_to_string(PathBuf::from("test.txt")).unwrap();
+            let lines: Vec<_> = data.lines().filter(|x| !x.is_empty()).collect();
+            let mut cmds = Vec::new();
+            let mut line_iter = lines.iter();
 
-            for (value, is_match) in matcher {
-                println!("{value} {is_match}");
+            while let Some(line) = line_iter.next() {
+                if line.starts_with('#') {
+                    let description = *line;
+                    if let Some(line) = line_iter.next() {
+                        cmds.push((description, *line));
+                    } else {
+                        panic!("didn't find command for a description in the fiel");
+                    }
+                }
             }
-        },
+
+            for cmd in cmds {
+                println!("Lesson:");
+                println!("{}", cmd.0);
+
+                let mut input = String::new();
+                match stdin().read_line(&mut input) {
+                    Ok(_) => {
+                        let ast = CmdParser::compile(cmd.1);
+                        let in_lex = InputCmdLexer::compile(&input);
+                        let matcher = match_schema(&ast, &in_lex, 0, 0);
+
+                        for (value, is_match) in matcher {
+                            println!("{value} {is_match}");
+                        }
+                    },
+                    Err(err) => {
+                        panic!("Error reading the input {}", err);
+                    }
+                }
+            }
+       },
         Some(Commands::Tmux) => {
             let data = fs::read_to_string(PathBuf::from("tmux.json")).unwrap();
             let course: Vec<Cmd> = serde_json::from_str(&data)?;

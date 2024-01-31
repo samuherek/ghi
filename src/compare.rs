@@ -74,31 +74,31 @@ use super::input_lexer::Token;
 ///     )
 /// ]
 pub fn match_schema(ast: &Vec<CmdWord>, tokens: &Vec<Token>, ast_idx: usize, token_idx: usize) -> Vec<(String, bool)> {
-    let mut curr_ast_idx = ast_idx;
-    let mut curr_token_idx = token_idx;
+    let mut ast_idx = ast_idx;
+    let mut token_idx = token_idx;
     let mut res: Vec<(String, bool)> = Vec::new();
 
-    while curr_ast_idx < ast.len() && curr_token_idx < tokens.len() {
-        let cmd = &ast[curr_ast_idx];
-        let token = &tokens[curr_token_idx];
+    while ast_idx < ast.len() && token_idx < tokens.len() {
+        let cmd = &ast[ast_idx];
+        let token = &tokens[token_idx];
 
         match (cmd, token) {
             (CmdWord::Literal{value}, Token::Str(word)) => {
                 res.push((cmd.to_string(), value == word));
-                curr_ast_idx += 1;
-                curr_token_idx += 1;
+                ast_idx += 1;
+                token_idx += 1;
             },
             (CmdWord::FlagShort{value, input}, Token::FlagShort(word)) => {
                 // TODO: Make an implementation for the flagShort only flag string
                 res.push((format!("-{value}"), value == word));
-                curr_ast_idx += 1;
-                curr_token_idx += 1;
+                ast_idx += 1;
+                token_idx += 1;
 
                 if let Some(input) = input.as_ref() {
-                    match (input, tokens.get(curr_token_idx)) {
+                    match (input, tokens.get(token_idx)) {
                         (CmdWord::Variable{..}, Some(Token::Str(_))) => {
                             res.push((input.to_string(), true)) ;
-                            curr_token_idx += 1;
+                            token_idx += 1;
                         },
                         _ => {
                             res.push((input.to_string(), false));
@@ -108,77 +108,23 @@ pub fn match_schema(ast: &Vec<CmdWord>, tokens: &Vec<Token>, ast_idx: usize, tok
             },
             (CmdWord::FlagLong{value, ..}, Token::FlagLong(word)) => {
                 res.push((cmd.to_string(), value == word));
-                curr_ast_idx += 1;
-                curr_token_idx += 1;
+                ast_idx += 1;
+                token_idx += 1;
             },
             (CmdWord::FlagCombo{values}, Token::FlagCombo(chars)) => {
                 res.push((cmd.to_string(), values == chars));
-                curr_ast_idx += 1;
-                curr_token_idx += 1;
+                ast_idx += 1;
+                token_idx += 1;
             }
             (cmd, token) => {
                 unimplemented!("missing impl for cmd {} and token {}", cmd.to_string(), token.to_string());
             }
         }
+    }
 
-        // match (&ast[curr_ast_idx], &tokens[curr_token_idx]) {
-        //     (CmdWord::Command(cmd), Token::Str(word)) if cmd == word => {
-        //         res.push((cmd.clone(), true));
-        //         curr_ast_idx += 1;
-        //         curr_token_idx += 1;
-        //     },
-        //     (CmdWord::Arg(cmd), Token::Str(word)) if cmd == word => {
-        //         res.push((cmd.clone(), true));
-        //         curr_ast_idx += 1;
-        //         curr_token_idx += 1;
-        //     },
-        //     (CmdWord::Flag{ values }, Token::FlagShort(flag)) => {
-        //         curr_ast_idx += 1;
-        //         curr_token_idx += 1;
-        //         let mut correct = false;
-        //         let mut f = String::new();
-        //         let flags: Vec<char> = flag.chars().collect();
-        //         let all_flags_match = values.iter().all(|x| x.chars().next().is_some_and(|xx| flags.contains(&xx)));
-        //
-        //         if values.len() == flags.len() &&  all_flags_match {
-        //             correct = true;
-        //             f.push('-');
-        //             f.push_str(flag.as_str());
-        //         }
-        //
-        //         res.push((f, correct));
-        //     },
-        //     (CmdWord::Flag{ values }, Token::FlagLong(flag)) => {
-        //         curr_ast_idx += 1;
-        //         curr_token_idx += 1;
-        //         let mut correct = false;
-        //         let mut f = String::new();
-        //         let flag_matches = values.iter().next().is_some_and(|x| x == flag);
-        //
-        //         if values.len() == 1 && flag_matches {
-        //             correct = true;
-        //             f.push_str("--");
-        //             f.push_str(flag.as_str());
-        //         }
-        //
-        //         res.push((f, correct));
-        //     },
-        //     // (CmdWord::Chunk{ content, required }, Token::Input(val)) => {
-        //     //     if *required {
-        //     //         curr_ast_idx += 1;
-        //     //         curr_token_idx += 1;
-        //     //         if content.len() == 1 {
-        //     //             if let Some(CmdWord::Arg(tag)) = content.get(0) {
-        //     //                 res.push((tag.clone(), true));
-        //     //             }
-        //     //         }
-        //     //     }
-        //     // },
-        //     (_, token) => {
-        //         res.push(("Unknow".to_string(), false));
-        //         break; 
-        //     }
-        // }
+    while let Some(token) = tokens.get(token_idx) {
+        res.push((token.to_string(), false));
+        token_idx += 1;
     }
 
     return res 
