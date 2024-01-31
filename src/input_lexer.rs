@@ -9,8 +9,8 @@
 /// example: command --option=23
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
-    FlagShort(String),
-    FlagCombo(String),
+    FlagShort(char),
+    FlagCombo(Vec<char>),
     FlagLong(String),
     Str(String),
     Int(usize) // TODO: not implemented yet
@@ -102,7 +102,13 @@ impl<'a> InputCmdLexer<'a> {
                     } else {
                         self.read_char();
                         let value = self.read_str(); 
-                        Some(Token::FlagShort(value))
+                        if value.len() < 2 {
+                            let value = value.chars().next().expect("Short flag value has a character");
+                            Some(Token::FlagShort(value))
+                        } else {
+                            let value = value.chars().collect();
+                            Some(Token::FlagCombo(value))
+                        }
                     }
                 },
                 _ => {
@@ -146,8 +152,8 @@ mod tests {
         let input = "display-message -p -t client-0 'Hello, World!'";
         let exp = vec![
             Token::Str(String::from("display-message")),
-            Token::FlagShort(String::from("p")),
-            Token::FlagShort(String::from("t")),
+            Token::FlagShort('p'),
+            Token::FlagShort('t'),
             Token::Str(String::from("client-0")),
             Token::Str(String::from("Hello, World!")),
         ];
@@ -160,7 +166,7 @@ mod tests {
         let input = "capture-pane -t pane-1";
         let exp = vec![
             Token::Str(String::from("capture-pane")),
-            Token::FlagShort(String::from("t")),
+            Token::FlagShort('t'),
             Token::Str(String::from("pane-1")),
         ];
         let result = InputCmdLexer::compile(&input);
@@ -172,7 +178,7 @@ mod tests {
         let input = "save-buffer -b 1 /path/to/file.txt";
         let exp = vec![
             Token::Str(String::from("save-buffer")),
-            Token::FlagShort(String::from("b")),
+            Token::FlagShort('b'),
             Token::Str(String::from("1")),
             Token::Str(String::from("/path/to/file.txt")),
         ];
@@ -185,9 +191,9 @@ mod tests {
         let input = "paste-buffer -t pane-2 -b 5";
         let exp = vec![
             Token::Str(String::from("paste-buffer")),
-            Token::FlagShort(String::from("t")),
+            Token::FlagShort('t'),
             Token::Str(String::from("pane-2")),
-            Token::FlagShort(String::from("b")),
+            Token::FlagShort('b'),
             Token::Str(String::from("5")),
         ];
         let result = InputCmdLexer::compile(&input);
@@ -199,12 +205,32 @@ mod tests {
         let input = "if-shell -b -t pane-3 \"test -f myfile.txt\" \"echo File exists\" \"echo File does not exist\"";
         let exp = vec![
             Token::Str(String::from("if-shell")),
-            Token::FlagShort(String::from("b")),
-            Token::FlagShort(String::from("t")),
+            Token::FlagShort('b'),
+            Token::FlagShort('t'),
             Token::Str(String::from("pane-3")),
             Token::Str(String::from("test -f myfile.txt")),
             Token::Str(String::from("echo File exists")),
             Token::Str(String::from("echo File does not exist")),
+        ];
+        let result = InputCmdLexer::compile(&input);
+        assert_eq!(result, exp);
+    }
+
+    #[test]
+    fn cmd5() {
+        let input = "-la";
+        let exp = vec![
+            Token::FlagCombo(vec!['l', 'a']),
+        ];
+        let result = InputCmdLexer::compile(&input);
+        assert_eq!(result, exp);
+    }
+
+    #[test]
+    fn cmd6() {
+        let input = "--long";
+        let exp = vec![
+            Token::FlagLong("long".to_string()),
         ];
         let result = InputCmdLexer::compile(&input);
         assert_eq!(result, exp);
