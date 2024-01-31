@@ -1,9 +1,5 @@
-use super::parser::{CmdWord, CmdParser};
-use super::lexer::{CmdLexer};
-use super::input_lexer::InputCmdLexer;
+use super::parser::CmdWord;
 use super::input_lexer::Token;
-
-
 
 //
 // schema: git add .
@@ -77,7 +73,7 @@ use super::input_lexer::Token;
 ///         node: CmdWord
 ///     )
 /// ]
-fn match_schema(ast: &Vec<CmdWord>, tokens: &Vec<Token>, ast_idx: usize, token_idx: usize) -> Vec<(String, bool)> {
+pub fn match_schema(ast: &Vec<CmdWord>, tokens: &Vec<Token>, ast_idx: usize, token_idx: usize) -> Vec<(String, bool)> {
     let mut curr_ast_idx = ast_idx;
     let mut curr_token_idx = token_idx;
     let mut res: Vec<(String, bool)> = Vec::new();
@@ -92,10 +88,23 @@ fn match_schema(ast: &Vec<CmdWord>, tokens: &Vec<Token>, ast_idx: usize, token_i
                 curr_ast_idx += 1;
                 curr_token_idx += 1;
             },
-            (CmdWord::FlagShort{value, ..}, Token::FlagShort(word)) => {
-                res.push((cmd.to_string(), value == word));
+            (CmdWord::FlagShort{value, input}, Token::FlagShort(word)) => {
+                // TODO: Make an implementation for the flagShort only flag string
+                res.push((format!("-{value}"), value == word));
                 curr_ast_idx += 1;
                 curr_token_idx += 1;
+
+                if let Some(input) = input.as_ref() {
+                    match (input, tokens.get(curr_token_idx)) {
+                        (CmdWord::Variable{..}, Some(Token::Str(_))) => {
+                            res.push((input.to_string(), true)) ;
+                            curr_token_idx += 1;
+                        },
+                        _ => {
+                            res.push((input.to_string(), false));
+                        }
+                    }
+                }
             },
             (CmdWord::FlagLong{value, ..}, Token::FlagLong(word)) => {
                 res.push((cmd.to_string(), value == word));
@@ -179,7 +188,8 @@ fn match_schema(ast: &Vec<CmdWord>, tokens: &Vec<Token>, ast_idx: usize, token_i
 
 mod tests {
     use super::*;
-
+    use crate::parser::CmdParser;
+    use crate::input_lexer::InputCmdLexer;
 
     #[test]
     fn match_single_item() {
@@ -259,34 +269,19 @@ mod tests {
            assert_eq!(*s, cmd.as_str() == split);
         }
     }
-    // #[test]
-    // fn match_multi_item() {
-    //     let ast = CmdParser::compile("git add");
-    //     let input = InputCmdLexer::compile("git add");
-    //     let matcher = match_schema(&ast, &input, 0, 0);
-    //     
-    //     assert_eq!(matcher, vec![
-    //        ("git".to_string(), true),
-    //        ("add".to_string(), true)
-    //     ]);
-    //
-    //     assert_ne!(matcher, vec![
-    //        ("git".to_string(), false),
-    //        ("add".to_string(), true)
-    //     ]);
-    // }
-    //
-    // #[test]
-    // fn match_multi_item2() {
-    //     let ast = CmdParser::compile("git add");
-    //     let input = InputCmdLexer::compile("git commit");
-    //     let matcher = match_schema(&ast, &input, 0, 0);
-    //     
-    //     assert_eq!(matcher, vec![
-    //        ("git".to_string(), true),
-    //        ("add".to_string(), false)
-    //     ]);
-    // }
 
+    #[test]
+    fn match_flag_input() {
+        let val = "git -l <path>";
+        let ast = CmdParser::compile(&val);
+        let input = InputCmdLexer::compile(&val);
+        let matcher = match_schema(&ast, &input, 0, 0);
+        let splits = val.split_whitespace().collect::<Vec<_>>();
 
+        for (i, (cmd, s)) in matcher.iter().enumerate() {
+            let split = splits[i];
+           assert_eq!(cmd, split);
+           assert_eq!(*s, cmd.as_str() == split);
+        }
+    }
 }

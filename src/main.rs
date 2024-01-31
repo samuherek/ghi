@@ -20,6 +20,8 @@ use std::process::Command;
 use serde::Deserialize;
 use serde_json;
 use parser::CmdParser;
+use input_lexer::InputCmdLexer;
+use compare::match_schema;
 
 #[derive(Parser)]
 #[command(author = "Sam Uherek <samuherekbiz@gmail.com>")]
@@ -343,14 +345,22 @@ fn main() -> anyhow::Result<()>{
             };
         },
         Some(Commands::Test) => {
-            for item in vec![
-                "some cmd --depth -f",
-                "some cmd -la",
-                "some <path> <path>",
-            ] {
-                println!("{}", item);
-                let res = CmdParser::compile(item).iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ");
-                println!("{res}");
+        //     for item in vec![
+        //         "some cmd --depth -f",
+        //         "some cmd -la",
+        //         "some <path> <path>",
+        //     ] {
+        //         println!("{}", item);
+        //         let res = CmdParser::compile(item).iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ");
+        //         println!("{res}");
+        //     }
+        // 
+            let ast = CmdParser::compile(&"git -l <path>");
+            let input = InputCmdLexer::compile(&"git -l");
+            let matcher = match_schema(&ast, &input, 0, 0);
+
+            for (value, is_match) in matcher {
+                println!("{value} {is_match}");
             }
         },
         Some(Commands::Tmux) => {
