@@ -5,6 +5,7 @@ mod parser;
 mod input_lexer;
 mod compare;
 mod commands;
+mod screen;
 
 use clap::{Parser, Subcommand};
 use rand::seq::SliceRandom;
