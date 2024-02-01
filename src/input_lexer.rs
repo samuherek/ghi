@@ -51,7 +51,6 @@ impl<'a> InputCmdLexer<'a> {
         lexer.read_char();
 
         while let Some(token) = lexer.next_token() {
-            println!("input lexer token {:?}", token);
             tokens.push(token);
         }
 
@@ -111,7 +110,6 @@ impl<'a> InputCmdLexer<'a> {
                     Some(Token::Str(value))
                 }
                 '-' => {
-                        println!("do we get here???? {:?}", self.ch);
                     if self.peak_char() == Some('-') {
                         self.read_char();
                         self.read_char();
@@ -121,7 +119,6 @@ impl<'a> InputCmdLexer<'a> {
                     // This is the case for something like "cd -".
                     // TODO: check if this comment is correct and the abastraction is correct.
                     } else if self.peak_char() == Some(' ') || self.peak_char() == None {
-                        println!("do we get here???? {:?}", self.ch);
                         Some(Token::Str("-".to_string()))
                     } else {
                         self.read_char();
@@ -136,7 +133,6 @@ impl<'a> InputCmdLexer<'a> {
                     }
                 },
                 c => {
-                    println!("we get this char {c}");
                     let value = self.read_str(); 
                     Some(Token::Str(value))
                 }

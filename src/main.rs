@@ -34,7 +34,7 @@ fn main() -> anyhow::Result<()>{
     match &cli.command {
         Some(Commands::Add{value}) => commands::add::run(value)?,
         Some(Commands::List) => commands::list::run()?,
-        Some(Commands::Test) => commands::test::run(),
+        Some(Commands::Test) => commands::test::run()?,
         Some(Commands::Tmux) => commands::tmux::run()?,
         Some(Commands::Flash) => {
             let mut store = Store::new();

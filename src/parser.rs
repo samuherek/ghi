@@ -139,7 +139,7 @@ impl CmdParser {
             parser.next_token();
         };
 
-        println!("AST::: {:?}", ast);
+        // println!("AST::: {:?}", ast);
 
        return ast;
     }
