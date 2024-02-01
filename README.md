@@ -1,7 +1,6 @@
 
 ![Ghi](https://github.com/samuherek/ghi/assets/5614385/784fc006-d875-4300-b113-f0644db4da69)
 
-https://github.com/samuherek/ghi/assets/5614385/d3319dc5-b885-4722-8423-fccc8ecddfc4
 
 ### How to use
 
