@@ -1,9 +1,9 @@
 
 ![Ghi](https://github.com/samuherek/ghi/assets/5614385/784fc006-d875-4300-b113-f0644db4da69)
-The key ingredient to get you cooking in your code.
+
+https://github.com/samuherek/ghi/assets/5614385/d3319dc5-b885-4722-8423-fccc8ecddfc4
 
 ### How to use
-
 
 Add a new item to the history of things to save
 ```sh
@@ -13,6 +13,11 @@ $ ghi add "command"
 List all the items in the saved history
 ```sh
 $ ghi list
+```
+
+Test your knowledge on some some predetermined items
+```sh
+$ ghi test
 ```
 
 Access interactive adding and removing from `bash_history` or `zsh_history`
