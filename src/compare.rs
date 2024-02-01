@@ -139,6 +139,18 @@ pub fn match_schema(ast: &Vec<CmdWord>, tokens: &Vec<Token>, ast_idx: usize, tok
         }
     }
 
+    while let Some(cmd) = ast.get(ast_idx) {
+        match cmd {
+            CmdWord::Variable { required, .. } => {
+                res.push((cmd.to_string(), *required));
+            },
+            _ => {
+                res.push((cmd.to_string(), false));
+            }
+        }
+        ast_idx += 1;
+    }
+
     while let Some(token) = tokens.get(token_idx) {
         res.push((token.to_string(), false));
         token_idx += 1;

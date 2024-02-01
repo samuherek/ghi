@@ -1,0 +1,16 @@
+
+// Need to figure out the syntax for this. 
+// the real value of the command is "cd ~sam"
+// which means, it's a composable variable that
+// has some part of it as literal and some part of
+// it as a variable.
+// What is the syntax for this? 
+// What is the ASt for it?
+# Go to the home directory of the specified user:
+cd "~"<username>
+
+
+// The optional string is not implemented.
+// Only optional variable.
+# Go to the home directory of the current user:
+cd ["~"]

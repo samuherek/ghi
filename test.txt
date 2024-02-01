@@ -1,3 +1,15 @@
+# Go to the previously chosen directory:
+cd "-"
+
+# Go up to the parent of the current directory:
+cd ".."
+
+# Go to the home directory of the current user:
+cd "~"
+
+# Go to the root directory:
+cd "/"
+
 # To display everything in <dir>, excluding hidden files:
 ls [dir]
 

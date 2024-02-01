@@ -51,6 +51,7 @@ impl<'a> InputCmdLexer<'a> {
         lexer.read_char();
 
         while let Some(token) = lexer.next_token() {
+            println!("input lexer token {:?}", token);
             tokens.push(token);
         }
 
@@ -110,11 +111,18 @@ impl<'a> InputCmdLexer<'a> {
                     Some(Token::Str(value))
                 }
                 '-' => {
+                        println!("do we get here???? {:?}", self.ch);
                     if self.peak_char() == Some('-') {
                         self.read_char();
                         self.read_char();
                         let value = self.read_str(); 
                         Some(Token::FlagLong(value))
+                    // In case the dash is its own, we consider this to simply be a string
+                    // This is the case for something like "cd -".
+                    // TODO: check if this comment is correct and the abastraction is correct.
+                    } else if self.peak_char() == Some(' ') || self.peak_char() == None {
+                        println!("do we get here???? {:?}", self.ch);
+                        Some(Token::Str("-".to_string()))
                     } else {
                         self.read_char();
                         let value = self.read_str(); 
@@ -127,11 +135,9 @@ impl<'a> InputCmdLexer<'a> {
                         }
                     }
                 },
-                _ => {
+                c => {
+                    println!("we get this char {c}");
                     let value = self.read_str(); 
-                    // TODO: might need to use "peak" instead of "read"
-                    // so that we don't have to "return" which is inconsistent
-                    // with the rest of the arms.
                     Some(Token::Str(value))
                 }
             }

@@ -93,6 +93,14 @@ impl<'a> CmdLexer<'a> {
         return self.input[pos..=self.position].to_string();
     }
 
+    fn read_literal(&mut self) -> String {
+        let pos = self.position;
+        while self.peak_char() != Some('"') {
+            self.read_char();
+        }
+        return self.input[pos..=self.position].to_string();
+    }
+
     fn read_flag(&mut self) -> String {
         let pos = self.position;
         while is_flag_letter(self.peak_char()) {
@@ -137,6 +145,16 @@ impl<'a> CmdLexer<'a> {
                             Some(Token::FlagShort(value))
                         }
                     }
+                },
+                '"' => {
+                    self.read_char();
+                    let value = self.read_literal();
+                    self.read_char();
+
+                    if self.ch != Some('"') {
+                        panic!("Could not enclose explicit string with '{}'", self.ch.unwrap());
+                    }
+                    Some(Token::Str(value)) 
                 },
                 '.' => {
                     self.consume_dots();
