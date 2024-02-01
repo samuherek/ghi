@@ -129,9 +129,12 @@ pub fn match_schema(ast: &Vec<CmdWord>, tokens: &Vec<Token>, ast_idx: usize, tok
                 res.push((cmd.to_string(), values == chars));
                 ast_idx += 1;
                 token_idx += 1;
-            }
+            },
             (cmd, token) => {
-                unimplemented!("missing impl for cmd {} and token {}", cmd.to_string(), token.to_string());
+                res.push((cmd.to_string(), false));
+                println!("Cmd and token might be missing impl for {} and {}", cmd, token);
+                ast_idx += 1;
+                token_idx += 1;
             }
         }
     }
