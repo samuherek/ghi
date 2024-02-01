@@ -48,6 +48,7 @@ pub enum CmdWord {
     Variable {
         name: String,
         kind: Variable,
+        required: bool,
     },
     FlagShort {
         value: char,
@@ -71,7 +72,13 @@ impl fmt::Display for CmdWord {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CmdWord::Literal{value} => write!(f, "{value}"),
-            CmdWord::Variable{ name, .. } => write!(f, "<{name}>"),
+            CmdWord::Variable{ name, required, .. } => {
+                if *required {
+                    write!(f, "[{name}]")
+                } else {
+                    write!(f, "<{name}>")
+                }
+            },
             CmdWord::FlagShort{ value, input } => {
                 if let Some(input) = input.as_ref() {
                     write!(f, "-{value} {input}")
@@ -154,17 +161,6 @@ impl CmdParser {
         }
     }
 
-    fn read_variable(&self) -> CmdWord {
-        if let Some(Token::Str(value)) = &self.curr_token {
-            CmdWord::Variable {
-                name: value.to_string(),
-                kind: Variable::String,
-            }
-        } else {
-            panic!("Called parse variable without string");
-        }
-    }
-
     fn parse_exp(&mut self) -> Vec<Option<CmdWord>> {
         let token = self.curr_token.clone().expect("Cluld not find token in the next token");
         let mut words = Vec::new();
@@ -224,6 +220,7 @@ impl CmdParser {
                     words.push(Some(CmdWord::Variable {
                         name: value.to_string(),
                         kind: Variable::String,
+                        required: true
                     }));
                 } else {
                     panic!("Called parse variable without string");
@@ -234,20 +231,23 @@ impl CmdParser {
                     panic!("LAr can onyl take one argument and needs closing tag '>' ");
                 }
             },
-            // call self.parse_exp until the next token is RSq
-            // Token::LSq => {
-            //     while self.peak_token != Some(Token::RSq) {
-            //         self.next_token();
-            //         for item in self.parse_exp() {
-            //             words.push(item);
-            //         }
-            //     }
-            //     self.next_token();
-            //
-            //     if self.curr_token != Some(Token::RSq) {
-            //         panic!("LSq did not find closing tag and run out of tokens");
-            //     }
-            // },
+            Token::LSq => {
+                self.next_token();
+                if let Some(Token::Str(value)) = &self.curr_token {
+                    words.push(Some(CmdWord::Variable {
+                        name: value.to_string(),
+                        kind: Variable::String,
+                        required: false
+                    }));
+                } else {
+                    panic!("Called parse variable without string");
+                }
+                self.next_token();
+
+                if self.curr_token != Some(Token::RSq) {
+                    panic!("LSq can only take one argument and needs closing tag ']' ");
+                }
+            },
             Token::Or => {
                 // take the previous exp and combine it with the next exp
                 todo!();
@@ -340,6 +340,7 @@ mod tests {
                    CmdWord::Variable {
                        name: "path".to_string(),
                        kind: Variable::String,
+                       required: true,
                    }
         ]);
     }
@@ -378,6 +379,7 @@ mod tests {
                        input: Box::new(Some(CmdWord::Variable {
                             name: "value".to_string(),
                             kind: Variable::String, 
+                            required: true
                        })),
                    }
         ]);
