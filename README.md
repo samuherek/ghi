@@ -27,6 +27,14 @@ $ ghi
 
 ### TODO:
 
+[ ] Setup a cursor tracking and syncing with the new diff
+
+[ ] render the question/success/failure/ in a box in the middle of the screen
+
+[ ] responsive resizing of the terminal and the text wrapping/cutting/...
+
+
+
 [ ] interactive add of a command 
      - it will trigger an editor to add description
      - it will trigger an editor to provide translation of the command into a command language "ghi" uses internally
