@@ -1,60 +1,36 @@
-use std::fs;
+use std::{fs, thread, mem};
 use std::path::PathBuf;
 use std::io::{self, stdout, Write};
 use crate::parser::CmdParser;
 use crate::input_lexer::InputCmdLexer;
 use crate::compare::match_schema;
-use crossterm::{execute, cursor, style};
-use crossterm::event::{self, KeyCode, KeyModifiers, Event};
+use crossterm::{execute, cursor, style,QueueableCommand};
+use crossterm::event::{self, KeyCode, KeyModifiers, Event, poll, read, KeyEventKind};
 use crossterm::terminal::{self, LeaveAlternateScreen, Clear, ClearType, EnterAlternateScreen};
-use crossterm::QueueableCommand;
 use anyhow;
+use std::time::Duration;
+use crate::screen::{Screen, ScreenBuf, Point, Cell, apply_patches};
 
+#[derive(PartialEq)]
 enum View {
     Prompt, 
     Correct,
     Wrong(String, String),
 }
 
-struct Screen {
+struct State {
     cmd_idx: usize,
     input: String, 
-    quit: bool,
     view: View,
 }
 
-impl Screen {
-    fn enable() -> io::Result<Self> {
-        execute!(stdout(), EnterAlternateScreen)?;
-        terminal::enable_raw_mode()?;
-        Ok(Self {
+impl State {
+    fn new() -> Self {
+        Self {
             cmd_idx: 0,
-            input: String::new() ,
-            quit: false,
+            input: String::new(), 
             view: View::Prompt,
-        })
-    }
-
-
-    fn reset(&self, qc: &mut impl Write) -> io::Result<()> {
-        qc.queue(Clear(ClearType::All))?;
-        qc.queue(cursor::MoveTo(0, 0))?;
-        qc.queue(cursor::Hide)?;
-
-        qc.flush()?;
-
-        Ok(())
-    }
-}
-
-impl Drop for Screen {
-    fn drop(&mut self) {
-        let _ = terminal::disable_raw_mode().map_err(|err| {
-            eprintln!("ERROR: disable raw mode: {err}")
-        });
-        let _ = execute!(stdout(), LeaveAlternateScreen).map_err(|err| {
-            eprintln!("ERROR: leave alternate screen: {err}")
-        });
+        }
     }
 }
 
@@ -75,108 +51,126 @@ pub fn run() -> anyhow::Result<()>{
         }
     }
 
-    let mut screen = Screen::enable()?;
     let mut stdout = stdout();
-    let (screen_cols, screen_rows) = terminal::size()?;
+    let mut screen = Screen::start()?;
+    let (mut w, mut h) = terminal::size()?;
+    let mut curr_buf = ScreenBuf::new(w.into(), h.into());
+    let mut next_buf = ScreenBuf::new(w.into(), h.into());
+    let mut state = State::new();
+    let (description, cmd) = cmds.get(state.cmd_idx).unwrap();
 
     while !screen.quit {
-        let (description, cmd) = cmds.get(screen.cmd_idx).unwrap();
-        stdout.queue(cursor::MoveTo(0, 0))?;
-        stdout.queue(style::Print(description))?;
-
-        match &screen.view {
-            View::Prompt => {
-                stdout.queue(cursor::MoveTo(0, 3))?;
-                stdout.queue(Clear(ClearType::CurrentLine))?;
-                stdout.queue(cursor::MoveTo(0, 2))?;
-                stdout.queue(Clear(ClearType::CurrentLine))?;
-                stdout.queue(style::Print(&screen.input))?;
-            },
-            View::Wrong(line, feedback) => {
-                stdout.queue(cursor::MoveTo(0, 2))?;
-                stdout.queue(Clear(ClearType::CurrentLine))?;
-                stdout.queue(style::Print(line))?;
-                stdout.queue(cursor::MoveTo(0, 3))?;
-                stdout.queue(Clear(ClearType::CurrentLine))?;
-                stdout.queue(style::Print(feedback))?;
-                stdout.queue(cursor::MoveTo(0, 2))?;
-            },
-            View::Correct => {
-                stdout.queue(cursor::MoveTo(0, 3))?;
-                stdout.queue(Clear(ClearType::CurrentLine))?;
-                stdout.queue(cursor::MoveTo(0, 2))?;
-                stdout.queue(Clear(ClearType::CurrentLine))?;
-                stdout.queue(style::Print(&"You are correct!"))?;
-            }
-        }
-        stdout.flush()?;
-
-        if let Event::Key(event) = event::read()? {
-            match event.code {
-                KeyCode::Char(x) => {
-                    if event.modifiers.contains(KeyModifiers::CONTROL) {
-                        match x {
-                            'c' => screen.quit = true,
-                            _ => {}
-                        }
-                    } else {
-                        screen.input.push(x);
-                    }
+        while poll(Duration::ZERO)? {
+            match read()? {
+                Event::Resize(next_width, next_height) => {
+                    w = next_width;
+                    h = next_height;
+                    curr_buf.resize(w.into(), h.into());
+                    next_buf.resize(w.into(), h.into());
+                    curr_buf.flush(&mut stdout);
                 },
-                KeyCode::Backspace => {
-                    screen.input.pop();
-                },
-                KeyCode::Enter => {
-                    match screen.view {
-                        View::Prompt => {
-                            let ast = CmdParser::compile(cmd);
-                            let in_lex = InputCmdLexer::compile(screen.input.trim());
-                            let matcher = match_schema(&ast, &in_lex, 0, 0);
-                            let is_full_match = matcher.iter().all(|x| x.1);
-
-                            let mut line = String::new();
-                            let mut underline = String::new();
-
-                            for (value, is_match) in matcher {
-                                line.push_str(value.as_str());
-                                if is_match {
-                                    underline.push_str(&" ".repeat(value.len()));
-                                } else {
-                                    underline.push_str(&"^".repeat(value.len()));
-                                }
-                                line.push_str(" ");
-                                underline.push_str(" ");
-                            }
-                            if is_full_match {
-                                screen.view = View::Correct;
+                Event::Key(event) if event.kind == KeyEventKind::Press => {
+                    match event.code {
+                        KeyCode::Char(x) => {
+                            if event.modifiers.contains(KeyModifiers::CONTROL) && x == 'c' {
+                                screen.quit = true;
                             } else {
-                                screen.view = View::Wrong(line, underline);
+                                state.input.push(x);
                             }
                         },
-                        _ => {
-                            screen.cmd_idx += 1;
-                            screen.view = View::Prompt;
+                        KeyCode::Backspace => {
+                            state.input.pop();
+                        },
+                        KeyCode::Enter => {
+                            if state.view == View::Prompt {
+                                let ast = CmdParser::compile(cmd);
+                                let in_lex = InputCmdLexer::compile(state.input.trim());
+                                let matcher = match_schema(&ast, &in_lex, 0, 0);
+                                let is_full_match = matcher.iter().all(|x| x.1);
 
-                            if screen.cmd_idx > cmds.len() {
-                                screen.quit = true;
+                                let mut line = String::new();
+                                let mut underline = String::new();
+
+                                for (value, is_match) in matcher {
+                                    let symbol = if is_match { " " } else { "^" };
+                                    line.push_str(value.as_str());
+                                    underline.push_str(&symbol.repeat(value.len()));
+                                    line.push_str(" ");
+                                    underline.push_str(" ");
+                                }
+                                state.view = if is_full_match {
+                                    View::Correct
+                                } else {
+                                    View::Wrong(line, underline)
+                                }
+                            } else {
+                                state.cmd_idx += 1;
+                                state.view = View::Prompt;
+
+                                if state.cmd_idx > cmds.len() {
+                                    screen.quit = true;
+                                }
                             }
-                        }
-                    };
-                    screen.input.clear();
+
+                            state.input.clear();
+                        },
+                        _ => {}
+                    }
                 },
                 _ => {}
             }
         }
 
-            // stdout.flush()?;
-        }
+        next_buf.clear();
+        next_buf.put_cell(Point::new(0, 0), Cell::new('c', style::Color::White));
 
-        let _ = terminal::disable_raw_mode().map_err(|err| {
-            eprintln!("ERROR: disable raw mode: {err}")
-        });
-        let _ = execute!(stdout, LeaveAlternateScreen).map_err(|err| {
-        eprintln!("ERROR: leave alternate screen: {err}")
-    });
+        apply_patches(&mut stdout, &curr_buf.diff(&next_buf))?;
+
+        stdout.flush()?;
+
+        mem::swap(&mut curr_buf, &mut next_buf);
+        thread::sleep(Duration::from_millis(16));
+    }
+
+
+
+    // let (description, cmd) = cmds.get(screen.cmd_idx).unwrap();
+    //     stdout.queue(cursor::MoveTo(0, 0))?;
+    //     stdout.queue(style::Print(description))?;
+    //
+    //     match &screen.view {
+    //         View::Prompt => {
+    //             stdout.queue(cursor::MoveTo(0, 3))?;
+    //             stdout.queue(Clear(ClearType::CurrentLine))?;
+    //             stdout.queue(cursor::MoveTo(0, 2))?;
+    //             stdout.queue(Clear(ClearType::CurrentLine))?;
+    //             stdout.queue(style::Print(&screen.input))?;
+    //         },
+    //         View::Wrong(line, feedback) => {
+    //             stdout.queue(cursor::MoveTo(0, 2))?;
+    //             stdout.queue(Clear(ClearType::CurrentLine))?;
+    //             stdout.queue(style::Print(line))?;
+    //             stdout.queue(cursor::MoveTo(0, 3))?;
+    //             stdout.queue(Clear(ClearType::CurrentLine))?;
+    //             stdout.queue(style::Print(feedback))?;
+    //             stdout.queue(cursor::MoveTo(0, 2))?;
+    //         },
+    //         View::Correct => {
+    //             stdout.queue(cursor::MoveTo(0, 3))?;
+    //             stdout.queue(Clear(ClearType::CurrentLine))?;
+    //             stdout.queue(cursor::MoveTo(0, 2))?;
+    //             stdout.queue(Clear(ClearType::CurrentLine))?;
+    //             stdout.queue(style::Print(&"You are correct!"))?;
+    //         }
+    //     }
+    //     stdout.flush()?;
+    //
+    //     let _ = terminal::disable_raw_mode().map_err(|err| {
+    //         eprintln!("ERROR: disable raw mode: {err}")
+    //     });
+    //     let _ = execute!(stdout, LeaveAlternateScreen).map_err(|err| {
+    //     eprintln!("ERROR: leave alternate screen: {err}")
+    // });
 
     Ok(())
 }
