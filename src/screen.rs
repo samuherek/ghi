@@ -131,9 +131,7 @@ impl ScreenBuf {
         out.queue(Clear(ClearType::All))?;
         out.queue(cursor::MoveTo(0, 0))?;
         out.queue(cursor::Hide)?;
-
         out.flush()?;
-
         Ok(())
     }
 }

@@ -34,6 +34,19 @@ impl State {
     }
 }
 
+fn render_question(buf: &mut ScreenBuf, question: &str) {
+    for (i, c) in question.chars().enumerate() {
+        buf.put_cell(Point::new(i, 0), Cell::new(c, style::Color::White));
+    }
+}
+
+fn render_input(buf: &mut ScreenBuf, input: &String) {
+    for (i, c) in input.chars().enumerate() {
+        buf.put_cell(Point::new(i, 2), Cell::new(c, style::Color::White));
+    }
+}
+
+
 pub fn run() -> anyhow::Result<()>{
     let data = fs::read_to_string(PathBuf::from("test.txt")).unwrap();
     let lines: Vec<_> = data.lines().filter(|x| !x.is_empty()).collect();
@@ -57,7 +70,7 @@ pub fn run() -> anyhow::Result<()>{
     let mut curr_buf = ScreenBuf::new(w.into(), h.into());
     let mut next_buf = ScreenBuf::new(w.into(), h.into());
     let mut state = State::new();
-    let (description, cmd) = cmds.get(state.cmd_idx).unwrap();
+    let (mut description, mut cmd) = cmds.get(state.cmd_idx).unwrap();
 
     while !screen.quit {
         while poll(Duration::ZERO)? {
@@ -67,7 +80,7 @@ pub fn run() -> anyhow::Result<()>{
                     h = next_height;
                     curr_buf.resize(w.into(), h.into());
                     next_buf.resize(w.into(), h.into());
-                    curr_buf.flush(&mut stdout);
+                    curr_buf.flush(&mut stdout)?;
                 },
                 Event::Key(event) if event.kind == KeyEventKind::Press => {
                     match event.code {
@@ -109,6 +122,10 @@ pub fn run() -> anyhow::Result<()>{
 
                                 if state.cmd_idx > cmds.len() {
                                     screen.quit = true;
+                                } else {
+                                    let (desc, cm) = cmds.get(state.cmd_idx).unwrap();
+                                    cmd = cm;
+                                    description = desc;
                                 }
                             }
 
@@ -122,55 +139,23 @@ pub fn run() -> anyhow::Result<()>{
         }
 
         next_buf.clear();
-        next_buf.put_cell(Point::new(0, 0), Cell::new('c', style::Color::White));
+        render_question(&mut next_buf, &description);
 
+        match state.view {
+            View::Prompt => {
+                render_input(&mut next_buf, &state.input);
+            },
+            _ => {}
+        }
+        
         apply_patches(&mut stdout, &curr_buf.diff(&next_buf))?;
+        // sync_cursor();
 
         stdout.flush()?;
 
         mem::swap(&mut curr_buf, &mut next_buf);
         thread::sleep(Duration::from_millis(16));
     }
-
-
-
-    // let (description, cmd) = cmds.get(screen.cmd_idx).unwrap();
-    //     stdout.queue(cursor::MoveTo(0, 0))?;
-    //     stdout.queue(style::Print(description))?;
-    //
-    //     match &screen.view {
-    //         View::Prompt => {
-    //             stdout.queue(cursor::MoveTo(0, 3))?;
-    //             stdout.queue(Clear(ClearType::CurrentLine))?;
-    //             stdout.queue(cursor::MoveTo(0, 2))?;
-    //             stdout.queue(Clear(ClearType::CurrentLine))?;
-    //             stdout.queue(style::Print(&screen.input))?;
-    //         },
-    //         View::Wrong(line, feedback) => {
-    //             stdout.queue(cursor::MoveTo(0, 2))?;
-    //             stdout.queue(Clear(ClearType::CurrentLine))?;
-    //             stdout.queue(style::Print(line))?;
-    //             stdout.queue(cursor::MoveTo(0, 3))?;
-    //             stdout.queue(Clear(ClearType::CurrentLine))?;
-    //             stdout.queue(style::Print(feedback))?;
-    //             stdout.queue(cursor::MoveTo(0, 2))?;
-    //         },
-    //         View::Correct => {
-    //             stdout.queue(cursor::MoveTo(0, 3))?;
-    //             stdout.queue(Clear(ClearType::CurrentLine))?;
-    //             stdout.queue(cursor::MoveTo(0, 2))?;
-    //             stdout.queue(Clear(ClearType::CurrentLine))?;
-    //             stdout.queue(style::Print(&"You are correct!"))?;
-    //         }
-    //     }
-    //     stdout.flush()?;
-    //
-    //     let _ = terminal::disable_raw_mode().map_err(|err| {
-    //         eprintln!("ERROR: disable raw mode: {err}")
-    //     });
-    //     let _ = execute!(stdout, LeaveAlternateScreen).map_err(|err| {
-    //     eprintln!("ERROR: leave alternate screen: {err}")
-    // });
 
     Ok(())
 }
