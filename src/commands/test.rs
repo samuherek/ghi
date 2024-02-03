@@ -26,11 +26,14 @@ struct Prompt {
     ast: Vec<CmdWord>,
     feedback: Option<Vec<char>>,
     view: View,
+    rect: Rect,
 }
 
 impl Prompt {
     fn new(title: &str, cmd: &str) -> Self {
         let ast = CmdParser::compile(&cmd);
+        let mut rect = Rect::default();
+        rect.set_padding(Some(2), Some(4), Some(2), Some(4));
 
         Self {
             title: title.chars().collect(),
@@ -39,7 +42,19 @@ impl Prompt {
             ast,
             feedback: None,
             view: View::Prompt,
+            rect
         }
+    }
+
+    fn resize(&mut self, w: u16, h: u16) {
+        let padd_x = w / 8;
+        let padd_y = h / 10;
+        let b_w = w - (2 * padd_x);
+        let b_x = padd_x;
+        let b_h = h - (2 * padd_y);
+        let b_y = padd_y;
+        self.rect.set_anchor(b_x, b_y);
+        self.rect.set_dimensions(b_w, b_h);
     }
 
     fn set_question(&mut self, title: &str, cmd: &str) {
@@ -93,44 +108,48 @@ impl Prompt {
         self.input_cursor = 0;
     }
 
-    fn render_question(&self, buf: &mut ScreenBuf, rect: &Rect) {
+    fn render_question(&self, buf: &mut ScreenBuf) {
+        let tl = self.rect.top_left_padded(); 
         let text = self.title.iter().map(|ch| Cell::new(*ch, style::Color::White)).collect();
-        buf.put_cells(rect.top_left(), text);
+        buf.put_cells(tl, text);
     }
 
-    fn render_input(&self, buf: &mut ScreenBuf, rect: &Rect) {
+    fn render_input(&self, buf: &mut ScreenBuf) {
+        let tl = self.rect.top_left_padded().add(0,3); 
         let text = self.input.iter().map(|ch| Cell::new(*ch, style::Color::White)).collect();
-        buf.put_cells(rect.top_left(), text);
+        buf.put_cells(tl, text);
     }
 
-    fn render_wrong_feedback(&self, buf: &mut ScreenBuf, rect: &Rect) {
+    fn render_wrong_feedback(&self, buf: &mut ScreenBuf) {
+        let tl = self.rect.top_left_padded().add(0,3);
         let text = "You missed it:".chars().map(|ch| Cell::new(ch, style::Color::White)).collect();
-        buf.put_cells(rect.top_left(), text);
+        buf.put_cells(tl.clone(), text);
 
         let mut offset = 0;
 
         for (_, word) in self.ast.iter().enumerate() {
             let word = word.to_string();
             for (_, ch) in word.chars().enumerate() {
-                buf.put_cell(rect.point(offset, 1), Cell::new(ch, style::Color::White));
+                buf.put_cell(tl.add(offset, 1), Cell::new(ch, style::Color::White));
                 offset += 1;
             }
-            buf.put_cell(rect.point(offset, 1), Cell::new(' ', style::Color::White));
+            buf.put_cell(tl.add(offset, 1), Cell::new(' ', style::Color::White));
             offset += 1;
         }
 
         if let Some(feedback) = &self.feedback {
             for (i, ch) in feedback.iter().enumerate() {
-                buf.put_cell(rect.point(i as u16, 2), Cell::new(*ch, style::Color::White));
+                buf.put_cell(tl.add(i as u16, 2), Cell::new(*ch, style::Color::White));
             }
         } else {
             panic!("Expected to have feedback, but it was missing");
         }
     }
 
-    fn render_correct_feedback(&self, buf: &mut ScreenBuf, rect: &Rect) {
+    fn render_correct_feedback(&self, buf: &mut ScreenBuf) {
+        let tl = self.rect.top_left_padded().add(0, 3); 
         let text = "You got it!".chars().map(|ch| Cell::new(ch, style::Color::White)).collect();
-        buf.put_cells(rect.top_left(), text);
+        buf.put_cells(tl, text);
     }
 
     fn render_debug(&self, buf: &mut ScreenBuf, rect: &Rect) {
@@ -138,11 +157,36 @@ impl Prompt {
         buf.put_cells(rect.top_left(), text);
     }
 
+    fn render_boundary(&self, buf: &mut ScreenBuf) {
+        let top_left = self.rect.top_left();
+        let bottom_left = self.rect.bottom_left();
+        let top_right = self.rect.top_right();
+
+        let cells: Vec<Cell> = (0..self.rect.width())
+            .enumerate()
+            .map(|(i, _)| {
+                let ch = if i % 2 == 0 {
+                    '-'
+                } else {
+                    ' '
+                };
+                Cell::new(ch, style::Color::White)
+            }).collect();
+        buf.put_cells(top_left.clone(), cells.clone());
+        buf.put_cells(bottom_left, cells);
+
+        for i in 0..=self.rect.height() {
+            buf.put_cell(top_left.add(0, i), Cell::new('-', style::Color::White));
+            buf.put_cell(top_right.add(0, i), Cell::new('-', style::Color::White));
+        }
+    }
+
     fn sync_cursor(&self, out: &mut impl Write) -> io::Result<()>{
         match self.view {
             View::Prompt => {
+                let tl = self.rect.top_left_padded().add((self.input.len()) as u16, 3);
                 out.queue(cursor::Show)?;
-                out.queue(cursor::MoveTo(self.input_cursor, 2))?;
+                out.queue(cursor::MoveTo(tl.x, tl.y))?;
             },
             _ => {
                 out.queue(cursor::Hide)?;
@@ -151,7 +195,6 @@ impl Prompt {
         Ok(())
     }
 }
-
 
 pub fn run() -> anyhow::Result<()>{
     let data = fs::read_to_string(PathBuf::from("test.txt")).unwrap();
@@ -179,6 +222,7 @@ pub fn run() -> anyhow::Result<()>{
     let mut cmd_idx = 0;
     let (title, cmd) = cmds.get(cmd_idx).unwrap();
     let mut prompt = Prompt::new(title, cmd);
+    prompt.resize(term_w, term_h);
 
     while !screen.quit {
         while poll(Duration::ZERO)? {
@@ -188,6 +232,7 @@ pub fn run() -> anyhow::Result<()>{
                     term_h = next_height;
                     curr_buf.resize(term_w.into(), term_h.into());
                     next_buf.resize(term_w.into(), term_h.into());
+                    prompt.resize(term_w, term_h);
                     curr_buf.flush(&mut stdout)?;
                 },
                 Event::Key(event) if event.kind == KeyEventKind::Press => {
@@ -224,17 +269,18 @@ pub fn run() -> anyhow::Result<()>{
         }
 
         next_buf.clear();
-        prompt.render_question(&mut next_buf, &Rect::new(0, 0, term_w, term_h));
+        prompt.render_boundary(&mut next_buf);
+        prompt.render_question(&mut next_buf, );
 
         match prompt.view {
             View::Prompt => {
-                prompt.render_input(&mut next_buf, &Rect::new(0, 2, term_w, term_h));
+                prompt.render_input(&mut next_buf);
             },
             View::Correct => {
-                prompt.render_correct_feedback(&mut next_buf, &Rect::new(0, 2, term_w, term_h));
+                prompt.render_correct_feedback(&mut next_buf);
             },
             View::Wrong => {
-                prompt.render_wrong_feedback(&mut next_buf, &Rect::new(0, 2, term_w, term_h));
+                prompt.render_wrong_feedback(&mut next_buf);
             },
         }
 
