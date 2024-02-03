@@ -111,10 +111,8 @@ impl ScreenBuf {
 
     pub fn flush(&self, out: &mut impl Write) -> io::Result<()> {
         let mut curr_fg = style::Color::White;
-        let mut curr_bg = style::Color::Black;
         out.queue(Clear(ClearType::All))?;
         out.queue(style::SetForegroundColor(curr_fg))?;
-        out.queue(style::SetBackgroundColor(curr_bg))?;
         out.queue(cursor::MoveTo(0, 0))?;
         for Cell{ch, fg} in self.cells.iter() {
             if curr_fg != *fg {

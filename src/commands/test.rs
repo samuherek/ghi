@@ -15,12 +15,11 @@ use crate::screen::{Screen, ScreenBuf, Point, Cell, apply_patches};
 enum View {
     Prompt, 
     Correct,
-    Wrong(String, String),
+    Wrong(Vec<char>, Vec<char>),
 }
 
 struct State {
     cmd_idx: usize,
-    input: String, 
     view: View,
 }
 
@@ -28,7 +27,6 @@ impl State {
     fn new() -> Self {
         Self {
             cmd_idx: 0,
-            input: String::new(), 
             view: View::Prompt,
         }
     }
@@ -40,9 +38,50 @@ fn render_question(buf: &mut ScreenBuf, question: &str) {
     }
 }
 
-fn render_input(buf: &mut ScreenBuf, input: &String) {
-    for (i, c) in input.chars().enumerate() {
-        buf.put_cell(Point::new(i, 2), Cell::new(c, style::Color::White));
+struct Prompt {
+    input: Vec<char>,
+    cursor: u16,
+    
+}
+
+impl Prompt {
+    fn new() -> Self {
+        Self {
+            input: Vec::new(),
+            cursor: 0
+        }
+    }
+
+    fn append_input(&mut self, ch: char) {
+        self.input.push(ch);
+        self.cursor += 1;
+    }
+
+    fn backspace_input(&mut self) {
+        if self.input.len() > 0 {
+            self.input.pop();
+            self.cursor -= 1;
+        }
+    }
+
+    fn get_input_string(&self) -> String {
+       self.input.iter().collect() 
+    }
+
+    fn reset_input(&mut self) {
+        self.input.clear();
+        self.cursor = 0;
+    }
+
+    fn render(&self, buf: &mut ScreenBuf) {
+        for (i, c) in self.input.iter().enumerate() {
+            buf.put_cell(Point::new(i, 2), Cell::new(*c, style::Color::White));
+        }
+    }
+
+    fn sync_cursor(&self, out: &mut impl Write) -> io::Result<()>{
+        out.queue(cursor::MoveTo(self.cursor, 2))?;
+        Ok(())
     }
 }
 
@@ -71,6 +110,7 @@ pub fn run() -> anyhow::Result<()>{
     let mut next_buf = ScreenBuf::new(w.into(), h.into());
     let mut state = State::new();
     let (mut description, mut cmd) = cmds.get(state.cmd_idx).unwrap();
+    let mut prompt = Prompt::new();
 
     while !screen.quit {
         while poll(Duration::ZERO)? {
@@ -88,28 +128,31 @@ pub fn run() -> anyhow::Result<()>{
                             if event.modifiers.contains(KeyModifiers::CONTROL) && x == 'c' {
                                 screen.quit = true;
                             } else {
-                                state.input.push(x);
+                                prompt.append_input(x);
                             }
                         },
                         KeyCode::Backspace => {
-                            state.input.pop();
+                            prompt.backspace_input();
                         },
                         KeyCode::Enter => {
                             if state.view == View::Prompt {
                                 let ast = CmdParser::compile(cmd);
-                                let in_lex = InputCmdLexer::compile(state.input.trim());
+                                let in_lex = InputCmdLexer::compile(&prompt.get_input_string());
                                 let matcher = match_schema(&ast, &in_lex, 0, 0);
                                 let is_full_match = matcher.iter().all(|x| x.1);
 
-                                let mut line = String::new();
-                                let mut underline = String::new();
+                                let mut line = Vec::new();
+                                let mut underline = Vec::new(); 
 
                                 for (value, is_match) in matcher {
-                                    let symbol = if is_match { " " } else { "^" };
-                                    line.push_str(value.as_str());
-                                    underline.push_str(&symbol.repeat(value.len()));
-                                    line.push_str(" ");
-                                    underline.push_str(" ");
+                                    let symbol = if is_match { ' ' } else { '^' };
+                                    for ch in value.chars() {
+                                        line.push(ch);
+                                        underline.push(symbol);
+                                    }
+
+                                    line.push(' ');
+                                    underline.push(' ');
                                 }
                                 state.view = if is_full_match {
                                     View::Correct
@@ -129,7 +172,7 @@ pub fn run() -> anyhow::Result<()>{
                                 }
                             }
 
-                            state.input.clear();
+                            prompt.reset_input();
                         },
                         _ => {}
                     }
@@ -143,14 +186,13 @@ pub fn run() -> anyhow::Result<()>{
 
         match state.view {
             View::Prompt => {
-                render_input(&mut next_buf, &state.input);
+                prompt.render(&mut next_buf);
+                prompt.sync_cursor(&mut stdout)?;
             },
             _ => {}
         }
         
         apply_patches(&mut stdout, &curr_buf.diff(&next_buf))?;
-        // sync_cursor();
-
         stdout.flush()?;
 
         mem::swap(&mut curr_buf, &mut next_buf);
