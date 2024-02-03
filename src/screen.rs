@@ -26,20 +26,43 @@ impl Default for Cell {
 }
 
 pub struct Point {
-    x: usize,
-    y: usize,
+    x: u16,
+    y: u16,
 }
 
 impl Point {
     pub fn new(x: usize, y: usize) -> Self {
         Self {
-            x,
-            y
+            x: x.try_into().expect("X point can not be more than u16 value"),
+            y: y.try_into().expect("Y point can not be more than u16 value")
         }
     }
 
-    fn buf_addr(&self, screen_width: usize) -> usize {
-        self.y * screen_width + self.x 
+    pub fn buf_addr(&self, screen_width: u16) -> usize {
+        (self.y * screen_width + self.x).into()
+    }
+}
+
+pub struct Rect {
+    x: u16,
+    y: u16,
+    width: u16,
+    height: u16, 
+}
+
+impl Rect {
+    pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
+        Self { x, y, width, height } 
+    }
+
+    pub fn top_left(&self) -> Point {
+        Point::new(self.x.into(), self.y.into())
+    }
+
+    pub fn point(&self, x: u16, y: u16) -> Point {
+        let x = self.x + x;
+        let y = self.y + y;
+        Point::new(x.into(), y.into())
     }
 }
 
@@ -53,13 +76,14 @@ pub struct Patch {
 #[derive(Debug)]
 pub struct ScreenBuf {
     cells: Vec<Cell>,
-    width: usize,
-    height: usize
+    width: u16,
+    height: u16
 }
 
 impl ScreenBuf {
-    pub fn new(width: usize, height: usize) -> Self {
-        let cells = vec![Cell::default(); width * height];
+    pub fn new(width: u16, height: u16) -> Self {
+        let len = (width * height).into();
+        let cells = vec![Cell::default(); len];
         Self {
             cells,
             width,
@@ -67,8 +91,9 @@ impl ScreenBuf {
         }
     }
 
-    pub fn resize(&mut self, width: usize, height: usize) {
-        self.cells.resize(width*height, Cell::default());
+    pub fn resize(&mut self, width: u16, height: u16) {
+        let len = (width*height).into();
+        self.cells.resize(len, Cell::default());
         self.cells.fill(Cell::default());
         self.width = width;
         self.height = height;
@@ -81,8 +106,9 @@ impl ScreenBuf {
             .enumerate()
             .filter(|(_, (a, b))| *a != *b)
             .map(|(i, (_, cell))| {
-                let x = i % self.width;
-                let y = i / self.width;
+                let w: usize = self.width.into();
+                let x = i % w;
+                let y = i / w;
                 Patch{cell: *cell, x, y}
             })
             .collect()

@@ -27,12 +27,10 @@ $ ghi
 
 ### TODO:
 
-[ ] Setup a cursor tracking and syncing with the new diff
 
 [ ] render the question/success/failure/ in a box in the middle of the screen
 
 [ ] responsive resizing of the terminal and the text wrapping/cutting/...
-
 
 
 [ ] interactive add of a command 
@@ -53,6 +51,8 @@ This is to remove any kind of sensitive information, and it makes it much easier
 
 
 ### DONE
+[-] Setup a cursor tracking and syncing with the new diff
+
 [-] remove items from the existing list.
 
 [-] add command to add custom command from input
