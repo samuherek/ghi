@@ -6,6 +6,7 @@ mod input_lexer;
 mod compare;
 mod commands;
 mod screen;
+mod db;
 
 use clap::{Parser, Subcommand};
 use rand::seq::SliceRandom;

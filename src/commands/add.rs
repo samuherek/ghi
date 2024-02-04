@@ -5,6 +5,15 @@ use tempfile::NamedTempFile;
 use std::process::Command;
 use std::env;
 use std::fs;
+use crate::db::establish_connection;
+use crate::db::schema::quests;
+use diesel::SelectableHelper;
+use crate::db::models::{Quest, NewQuest};
+use chrono::Utc;
+use crate::db::schema::quests::dsl::*;
+use diesel::RunQueryDsl;
+use diesel;
+use dotenv;
 
 pub fn run(value: &Option<String>) -> Result<()> {
     let mut store = Store::new();
@@ -27,21 +36,33 @@ pub fn run(value: &Option<String>) -> Result<()> {
 
     let file = NamedTempFile::new()?;
     let path = file.path();
-
-    let path2 = file.path().to_str().unwrap().to_string();
-    println!("path, {:?}", path);
-    println!("path2, {:?}", path2);
+    fs::write(path, input.as_bytes())?;
 
     let editor = env::var("EDITOR")?;
-
-    Command::new(editor)
-        .args(path)
-        .status()?;
+    Command::new(editor).arg(path).status()?;
 
     let i = fs::read_to_string(path)?;
-    println!("User input: {}", i);
 
+    dotenv::dotenv().ok();
+    let mut conn = establish_connection();
+    
+    let new_quest = NewQuest {
+       cmd_name: input.split_whitespace().next().unwrap(),
+       query: "",
+       pattern: &input,
+       created_at: Utc::now().naive_utc(),
+       updated_at: Utc::now().naive_utc()
+    };
+
+    let res = diesel::insert_into(quests::table)
+        .values(&new_quest)
+        .execute(&mut conn)
+        .expect("Error saving the quest");
+
+    println!("User input: {}", i);
     println!("added: {:?}", input);
+    
+    println!("{:?}", res);
 
     Ok(())
 }
