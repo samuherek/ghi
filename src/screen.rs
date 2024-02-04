@@ -72,6 +72,12 @@ impl Default for RectPadd {
     }
 }
 
+impl ToString for RectPadd {
+    fn to_string(&self) -> String {
+        format!("{}, {}, {}, {}", self.top, self.right, self.bottom, self.left)
+    }
+}
+
 pub struct Rect {
     x: u16,
     y: u16,
@@ -152,6 +158,13 @@ impl Rect {
         Point::new(self.x.into(), y.into())
     }
 
+    pub fn bottom_left_padded(&self) -> Point {
+        let x = (self.x + self.padding.left).into();
+        let y = (self.y + self.height - self.padding.bottom).into();
+        Point::new(x, y)
+    }
+
+
     pub fn bottom_right(&self) -> Point {
         let x = self.x + self.width;
         let y = self.y + self.height;
@@ -182,6 +195,22 @@ impl Default for Rect {
             height: 0,
             padding: RectPadd::default(),
         }
+    }
+}
+
+pub trait GhiDebug {
+    fn debug(&self) -> Vec<String>;
+}
+
+impl GhiDebug for Rect {
+    fn debug(&self) -> Vec<String> {
+        vec![
+            format!("x: {}", self.x),
+            format!("y: {}", self.y),
+            format!("width: {}", self.width),
+            format!("height: {}", self.height),
+            format!("padding: {}", self.padding.to_string()),
+        ]
     }
 }
 

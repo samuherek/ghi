@@ -9,7 +9,8 @@ use crossterm::event::{self, KeyCode, KeyModifiers, Event, poll, read, KeyEventK
 use crossterm::terminal::{self, LeaveAlternateScreen, Clear, ClearType, EnterAlternateScreen};
 use anyhow;
 use std::time::Duration;
-use crate::screen::{Screen, ScreenBuf, Point, Cell, Rect, apply_patches};
+use crate::screen::{Screen, ScreenBuf, Point, Cell, Rect, apply_patches, GhiDebug};
+
 
 
 #[derive(PartialEq)]
@@ -20,6 +21,7 @@ enum View {
 }
 
 struct Prompt {
+    cmd: Vec<char>,
     title: Vec<char>,
     input: Vec<char>,
     input_cursor: u16,
@@ -31,11 +33,13 @@ struct Prompt {
 
 impl Prompt {
     fn new(title: &str, cmd: &str) -> Self {
+        let cmd_name = cmd.split_whitespace().next().expect("Command must start with a command");
         let ast = CmdParser::compile(&cmd);
         let mut rect = Rect::default();
-        rect.set_padding(Some(2), Some(4), Some(2), Some(4));
+        rect.set_padding(Some(2), Some(4), Some(1), Some(4));
 
         Self {
+            cmd: cmd_name.chars().collect(),
             title: title.chars().collect(),
             input: Vec::new(),
             input_cursor: 0,
@@ -58,7 +62,9 @@ impl Prompt {
     }
 
     fn set_question(&mut self, title: &str, cmd: &str) {
+        let cmd_name = cmd.split_whitespace().next().expect("Command must start with a command");
         let ast = CmdParser::compile(&cmd);
+        self.cmd =cmd_name.chars().collect();
         self.title = title.chars().collect();
         self.reset_input();
         self.ast = ast;
@@ -77,7 +83,7 @@ impl Prompt {
 
             for (value, is_match) in matcher {
                 let symbol = if is_match { ' ' } else { '^' };
-                for _ in [..=value.len()] {
+                for _ in 0..value.len() {
                     underline.push(symbol);
                 }
                 underline.push(' ');
@@ -108,27 +114,36 @@ impl Prompt {
         self.input_cursor = 0;
     }
 
-    fn render_question(&self, buf: &mut ScreenBuf) {
+    fn render_cmd_name(&self, buf: &mut ScreenBuf) {
         let tl = self.rect.top_left_padded(); 
+        let mut text: Vec<Cell> = "Cmd: ".chars().map(|ch| Cell::new(ch,style::Color::White )).collect();
+        for ch in self.cmd.iter() {
+            text.push(Cell::new(*ch, style::Color::White));
+        }
+        buf.put_cells(tl, text);
+    }
+
+    fn render_question(&self, buf: &mut ScreenBuf) {
+        let tl = self.rect.top_left_padded().add(0, 1); 
         let text = self.title.iter().map(|ch| Cell::new(*ch, style::Color::White)).collect();
         buf.put_cells(tl, text);
     }
 
     fn render_input(&self, buf: &mut ScreenBuf) {
-        let tl = self.rect.top_left_padded().add(0,3); 
+        let tl = self.rect.bottom_left_padded(); 
         let text = self.input.iter().map(|ch| Cell::new(*ch, style::Color::White)).collect();
         buf.put_cells(tl, text);
     }
 
     fn render_wrong_feedback(&self, buf: &mut ScreenBuf) {
-        let tl = self.rect.top_left_padded().add(0,3);
+        let tl = self.rect.top_left_padded().add(0,4);
         let text = "You missed it:".chars().map(|ch| Cell::new(ch, style::Color::White)).collect();
         buf.put_cells(tl.clone(), text);
 
         let mut offset = 0;
 
-        for (_, word) in self.ast.iter().enumerate() {
-            let word = word.to_string();
+        for (_, cmd_word) in self.ast.iter().enumerate() {
+            let word = cmd_word.to_string();
             for (_, ch) in word.chars().enumerate() {
                 buf.put_cell(tl.add(offset, 1), Cell::new(ch, style::Color::White));
                 offset += 1;
@@ -147,14 +162,22 @@ impl Prompt {
     }
 
     fn render_correct_feedback(&self, buf: &mut ScreenBuf) {
-        let tl = self.rect.top_left_padded().add(0, 3); 
+        let tl = self.rect.top_left_padded().add(0, 4); 
         let text = "You got it!".chars().map(|ch| Cell::new(ch, style::Color::White)).collect();
         buf.put_cells(tl, text);
     }
 
     fn render_debug(&self, buf: &mut ScreenBuf, rect: &Rect) {
+        let top_left = rect.top_left();
         let text = "Debug".chars().map(|ch| Cell::new(ch, style::Color::White)).collect();
-        buf.put_cells(rect.top_left(), text);
+        buf.put_cells(top_left.clone(), text);
+
+        
+
+        // for (i, coord) in self.rect.debug().iter().enumerate() {
+        //     let text = coord.chars().map(|ch| Cell::new(ch, style::Color::White)).collect();
+        //     buf.put_cells(top_left.add(0, (1 + i) as u16), text);
+        // }
     }
 
     fn render_boundary(&self, buf: &mut ScreenBuf) {
@@ -184,7 +207,7 @@ impl Prompt {
     fn sync_cursor(&self, out: &mut impl Write) -> io::Result<()>{
         match self.view {
             View::Prompt => {
-                let tl = self.rect.top_left_padded().add((self.input.len()) as u16, 3);
+                let tl = self.rect.bottom_left_padded().add((self.input.len()) as u16, 0);
                 out.queue(cursor::Show)?;
                 out.queue(cursor::MoveTo(tl.x, tl.y))?;
             },
@@ -196,6 +219,8 @@ impl Prompt {
     }
 }
 
+
+
 pub fn run() -> anyhow::Result<()>{
     let data = fs::read_to_string(PathBuf::from("test.txt")).unwrap();
     let lines: Vec<_> = data.lines().filter(|x| !x.is_empty()).collect();
@@ -204,7 +229,7 @@ pub fn run() -> anyhow::Result<()>{
 
     while let Some(line) = line_iter.next() {
         if line.starts_with('#') {
-            let description = *line;
+            let (_, description) = line.split_once(' ').expect("Title needs to have a value");
             if let Some(line) = line_iter.next() {
                 cmds.push((description, *line));
             } else {
@@ -269,8 +294,9 @@ pub fn run() -> anyhow::Result<()>{
         }
 
         next_buf.clear();
+        prompt.render_cmd_name(&mut next_buf);
         prompt.render_boundary(&mut next_buf);
-        prompt.render_question(&mut next_buf, );
+        prompt.render_question(&mut next_buf);
 
         match prompt.view {
             View::Prompt => {
