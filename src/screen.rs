@@ -8,11 +8,17 @@ use crossterm::QueueableCommand;
 pub struct Cell {
     ch: char,
     fg: style::Color,
+    bg: Option<style::Color>
 }
 
 impl Cell {
     pub fn new(ch: char, fg: style::Color) -> Self {
-        Self { ch, fg }
+        Self { ch, fg, bg: None }
+    }
+
+    pub fn set_bg(&mut self, bg: style::Color) -> Self {
+        self.bg = Some(bg);
+        *self
     }
 }
 
@@ -21,6 +27,7 @@ impl Default for Cell {
         Self {
             ch: ' ',
             fg: style::Color::White,
+            bg: None
         }
     }
 }
@@ -285,10 +292,24 @@ impl ScreenBuf {
 
     pub fn flush(&self, out: &mut impl Write) -> io::Result<()> {
         let mut curr_fg = style::Color::White;
+        let mut curr_bg: Option<style::Color> = None;
         out.queue(Clear(ClearType::All))?;
         out.queue(style::SetForegroundColor(curr_fg))?;
+        if let Some(curr_bg) = curr_bg {
+            out.queue(style::SetBackgroundColor(curr_bg))?;
+        } else {
+            out.queue(style::ResetColor)?;
+        }
         out.queue(cursor::MoveTo(0, 0))?;
-        for Cell{ch, fg} in self.cells.iter() {
+        for Cell{ch, fg, bg} in self.cells.iter() {
+            if curr_bg != *bg {
+                curr_bg = *bg;
+                if let Some(curr_bg) = curr_bg {
+                    out.queue(style::SetBackgroundColor(curr_bg))?;
+                } else {
+                    out.queue(style::ResetColor)?;
+                }
+            }
             if curr_fg != *fg {
                 curr_fg = *fg;
                 out.queue(style::SetForegroundColor(curr_fg))?;
@@ -336,10 +357,17 @@ impl Drop for Screen {
  
 
 pub fn apply_patches(out: &mut impl QueueableCommand, diff: &Vec<Patch>) -> io::Result<()> {
-    out.queue(SetForegroundColor(style::Color::White))?;
+    // out.queue(SetForegroundColor(style::Color::White))?;
+    // out.queue(SetForegroundColor(style::Color::White))?;
 
-    for Patch{ cell: Cell{ ch, fg }, x, y } in diff {
+    for Patch{ cell: Cell{ ch, fg, bg }, x, y } in diff {
         out.queue(cursor::MoveTo(*x as u16, *y as u16))?;
+        if let Some(bg) = *bg {
+            out.queue(style::SetBackgroundColor(bg))?;
+        } else {
+            out.queue(style::ResetColor)?;
+        }
+        out.queue(style::SetForegroundColor(*fg))?;
         out.queue(style::Print(ch))?;
     }
     Ok(())

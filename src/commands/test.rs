@@ -162,17 +162,28 @@ impl Prompt {
     }
 
     fn render_correct_feedback(&self, buf: &mut ScreenBuf) {
-        let tl = self.rect.top_left_padded().add(0, 4); 
-        let text = "You got it!".chars().map(|ch| Cell::new(ch, style::Color::White)).collect();
+        let tl = self.rect.top_left_padded().add(0, 4);
+        let text = self.input.iter().map(|ch| Cell::new(*ch, style::Color::White)).collect();
         buf.put_cells(tl, text);
+
+        let tl = self.rect.top_left_padded().add((self.input.len() + 1) as u16, 4); 
+        let text = "Ok!".chars().map(|ch| Cell::new(ch, style::Color::White)).collect();
+        buf.put_cells(tl, text);
+    }
+
+    fn render_next_actions(&self, buf: &mut ScreenBuf) {
+        let tl = self.rect.bottom_left_padded().add(0, 0); 
+        let text = "Next".chars().map(|ch| {
+            Cell::new(ch, style::Color::Black).set_bg(style::Color::White)
+        }).collect();
+        buf.put_cells(tl, text);
+        
     }
 
     fn render_debug(&self, buf: &mut ScreenBuf, rect: &Rect) {
         let top_left = rect.top_left();
         let text = "Debug".chars().map(|ch| Cell::new(ch, style::Color::White)).collect();
         buf.put_cells(top_left.clone(), text);
-
-        
 
         // for (i, coord) in self.rect.debug().iter().enumerate() {
         //     let text = coord.chars().map(|ch| Cell::new(ch, style::Color::White)).collect();
@@ -282,9 +293,9 @@ pub fn run() -> anyhow::Result<()>{
                                 } else {
                                     let (t, c) = cmds.get(cmd_idx).unwrap();
                                     prompt.set_question(t, c);
+                                    prompt.reset_input();
                                 }
                             }
-                            prompt.reset_input();
                         },
                         _ => {}
                     }
@@ -304,9 +315,11 @@ pub fn run() -> anyhow::Result<()>{
             },
             View::Correct => {
                 prompt.render_correct_feedback(&mut next_buf);
+                prompt.render_next_actions(&mut next_buf);
             },
             View::Wrong => {
                 prompt.render_wrong_feedback(&mut next_buf);
+                prompt.render_next_actions(&mut next_buf);
             },
         }
 
