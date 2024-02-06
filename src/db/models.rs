@@ -9,8 +9,13 @@ use crate::db::schema::quests;
 pub struct Quest {
     pub id: i32,
     pub cmd_name: String,
-    pub pattern: String,
-    pub query: String,
+    pub cmd_pattern: String,
+    pub cmd_quest: String,
+    pub notes: Option<String>,
+    pub mock_output: Option<String>,
+    pub display_count: i32,
+    pub ok_count: i32,
+    pub miss_count: i32,
     pub created_at: NaiveDateTime, 
     pub updated_at: NaiveDateTime, 
 }
@@ -19,8 +24,7 @@ pub struct Quest {
 #[diesel(table_name = quests)]
 pub struct NewQuest<'a> {
     pub cmd_name: &'a str,
-    pub pattern: &'a str,
-    pub query: &'a str,
-    pub created_at: NaiveDateTime, 
-    pub updated_at: NaiveDateTime, 
+    pub cmd_pattern: &'a str,
+    pub cmd_quest: &'a str,
+    pub notes: &'a str,
 }

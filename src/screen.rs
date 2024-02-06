@@ -357,9 +357,6 @@ impl Drop for Screen {
  
 
 pub fn apply_patches(out: &mut impl QueueableCommand, diff: &Vec<Patch>) -> io::Result<()> {
-    // out.queue(SetForegroundColor(style::Color::White))?;
-    // out.queue(SetForegroundColor(style::Color::White))?;
-
     for Patch{ cell: Cell{ ch, fg, bg }, x, y } in diff {
         out.queue(cursor::MoveTo(*x as u16, *y as u16))?;
         if let Some(bg) = *bg {

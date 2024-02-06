@@ -1,23 +1,23 @@
-# Go to the previously chosen directory:
+# Go to the previously chosen directory
 cd "-"
 
-# Go up to the parent of the current directory:
+# Go up to the parent of the current directory
 cd ".."
 
-# Go to the home directory of the current user:
+# Go to the home directory of the current user
 cd "~"
 
-# Go to the root directory:
+# Go to the root directory
 cd "/"
 
-# To display everything in <dir>, excluding hidden files:
+# To display everything in <dir>, excluding hidden files
 ls [dir]
 
-# To display everything in <dir>, including hidden files:
+# To display everything in <dir>, including hidden files
 ls -a [dir]
 
-# To display all files, along with the size (with unit suffixes) and timestamp:
+# To display all files, along with the size (with unit suffixes) and timestamp
 ls -lh [dir]
 
-# To display files, sorted by size:
+# To display files, sorted by size
 ls -S [dir]

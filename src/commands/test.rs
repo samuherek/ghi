@@ -125,7 +125,10 @@ impl Prompt {
 
     fn render_question(&self, buf: &mut ScreenBuf) {
         let tl = self.rect.top_left_padded().add(0, 1); 
-        let text = self.title.iter().map(|ch| Cell::new(*ch, style::Color::White)).collect();
+        let mut text: Vec<Cell> = "Quest: ".chars().map(|ch| Cell::new(ch, style::Color::White)).collect();
+        for ch in self.title.iter() {
+            text.push(Cell::new(*ch, style::Color::White));
+        }
         buf.put_cells(tl, text);
     }
 

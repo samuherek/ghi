@@ -36,22 +36,50 @@ pub fn run(value: &Option<String>) -> Result<()> {
 
     let file = NamedTempFile::new()?;
     let path = file.path();
-    fs::write(path, input.as_bytes())?;
+    let template = format!(r#"#Input (convert to pattern)
+{}
+
+#Quest (one liners)
+
+#Notes (any additional information for yourselfe)"#,
+    input);
+    fs::write(path, template.as_bytes())?;
 
     let editor = env::var("EDITOR")?;
     Command::new(editor).arg(path).status()?;
 
-    let i = fs::read_to_string(path)?;
+    let file_input = fs::read_to_string(path)?;
+    let mut name = String::new();
+    let mut quest = String::new();
+    let mut pattern = String::new();
+    let mut note = String::new();
+
+    for section in file_input.split("#").collect::<Vec<_>>() {
+        if section.starts_with("Input") {
+            let input = section.lines().nth(1).unwrap();
+            name.push_str(input.split_whitespace().next().unwrap());
+            pattern.push_str(input);
+        } else if section.starts_with("Quest") {
+            quest.push_str(section.lines().nth(1).unwrap());
+        } else if section.starts_with("Notes") {
+            let n: String = section.lines().skip(1).collect();
+            note.push_str(&n);
+        }
+    }
+
+    println!("name: {name}");
+    println!("quest: {quest}");
+    println!("pattern: {pattern}");
+    println!("note: {note}");
 
     dotenv::dotenv().ok();
     let mut conn = establish_connection();
     
     let new_quest = NewQuest {
-       cmd_name: input.split_whitespace().next().unwrap(),
-       query: "",
-       pattern: &input,
-       created_at: Utc::now().naive_utc(),
-       updated_at: Utc::now().naive_utc()
+       cmd_name: &name,
+       cmd_quest: &quest,
+       cmd_pattern: &pattern,
+       notes: &note,
     };
 
     let res = diesel::insert_into(quests::table)
@@ -59,10 +87,10 @@ pub fn run(value: &Option<String>) -> Result<()> {
         .execute(&mut conn)
         .expect("Error saving the quest");
 
-    println!("User input: {}", i);
+    println!("User input: {}", file_input);
     println!("added: {:?}", input);
     
-    println!("{:?}", res);
+    // println!("{:?}", res);
 
     Ok(())
 }
