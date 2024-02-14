@@ -80,6 +80,7 @@ pub fn run(value: &Option<String>) -> Result<()> {
        cmd_quest: &quest,
        cmd_pattern: &pattern,
        notes: &note,
+       course_id: 1 
     };
 
     let res = diesel::insert_into(quests::table)
