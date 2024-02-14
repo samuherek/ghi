@@ -1,10 +1,12 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    courses (id) {
+    lessons (id) {
         id -> Integer,
         name -> Text,
+        cmd -> Text,
         description -> Text,
+        remote -> Bool,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -23,13 +25,13 @@ diesel::table! {
         miss_count -> Integer,
         created_at -> Timestamp,
         updated_at -> Timestamp,
-        course_id -> Integer,
+        lesson_id -> Integer,
     }
 }
 
-diesel::joinable!(quests -> courses (course_id));
+diesel::joinable!(quests -> lessons (lesson_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    courses,
+    lessons,
     quests,
 );

@@ -24,33 +24,37 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     Add { value: Option<String> },
-    List, 
-    Flash,
-    Tmux,
-    Test
+    // List, 
+    // Flash,
+    // Tmux,
+    // Test
 }
 
 fn main() -> anyhow::Result<()>{
     let cli = Cli::parse();
+    let conn = db::establish_connection();
 
     match &cli.command {
-        Some(Commands::Add{value}) => commands::add::run(value)?,
-        Some(Commands::List) => commands::list::run()?,
-        Some(Commands::Test) => commands::test::run()?,
-        Some(Commands::Tmux) => commands::tmux::run()?,
-        Some(Commands::Flash) => {
-            let mut store = Store::new();
-            store.init_database()?;
-
-            let list = store.db_take(None);
-            if let Some(val) = list.choose(&mut rand::thread_rng()) {
-                println!("{val}");
-            }  else {
-                eprintln!("The list is empty");
-            }
-
-        },
-        None => commands::interaction::run()?,
+        Some(Commands::Add{value}) => commands::add::run(&conn, value)?,
+        // Some(Commands::List) => commands::list::run()?,
+        // Some(Commands::Test) => commands::test::run()?,
+        // Some(Commands::Tmux) => commands::tmux::run()?,
+        // Some(Commands::Flash) => {
+        //     let mut store = Store::new();
+        //     store.init_database()?;
+        //
+        //     let list = store.db_take(None);
+        //     if let Some(val) = list.choose(&mut rand::thread_rng()) {
+        //         println!("{val}");
+        //     }  else {
+        //         eprintln!("The list is empty");
+        //     }
+        //
+        // },
+        None => {
+            println!("we are running!");
+        }
+        // None => commands::interaction::run()?,
     }
 
     return Ok(());
