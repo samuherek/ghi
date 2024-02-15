@@ -32,10 +32,11 @@ pub enum Commands {
 
 fn main() -> anyhow::Result<()>{
     let cli = Cli::parse();
-    let conn = db::establish_connection();
+    let mut conn = db::establish_connection();
+    db::ensure_tables(&mut conn);
 
     match &cli.command {
-        Some(Commands::Add{value}) => commands::add::run(&conn, value)?,
+        Some(Commands::Add{value}) => commands::add::run(&mut conn, value)?,
         // Some(Commands::List) => commands::list::run()?,
         // Some(Commands::Test) => commands::test::run()?,
         // Some(Commands::Tmux) => commands::tmux::run()?,

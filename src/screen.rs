@@ -330,17 +330,28 @@ impl ScreenBuf {
 }
 
 pub struct Screen {
-    pub quit: bool
+    with_alternate_screen: bool,
+    pub quit: bool,
 }
 
 impl Screen {
     pub fn start() -> io::Result<Self> {
-        execute!(stdout(), terminal::EnterAlternateScreen)?;
         terminal::enable_raw_mode()?;
 
         Ok(Self {
             quit: false,
+            with_alternate_screen: false
         })
+    }
+    
+    pub fn with_altenrate(&mut self) -> std::io::Result<&Self> {
+        self.with_alternate_screen = true; 
+        execute!(stdout(), terminal::EnterAlternateScreen)?;
+        Ok(self)
+    } 
+
+    pub fn quit(&mut self) {
+        self.quit = true; 
     }
 }
 
@@ -349,9 +360,12 @@ impl Drop for Screen {
         let _ = terminal::disable_raw_mode().map_err(|err| {
             eprintln!("ERROR: disable raw mode: {err}")
         });
-        let _ = execute!(stdout(), terminal::LeaveAlternateScreen).map_err(|err| {
-            eprintln!("ERROR: leave alternate screen: {err}")
-        });
+
+        if self.with_alternate_screen {
+            let _ = execute!(stdout(), terminal::LeaveAlternateScreen).map_err(|err| {
+                eprintln!("ERROR: leave alternate screen: {err}")
+            });
+        }
     }
 }
  
