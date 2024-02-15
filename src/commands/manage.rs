@@ -77,66 +77,84 @@ impl State {
         }
     }
 
-    fn render_header(&self, page: &mut Screen, point: screen::Point) {
-        let text = "Your available courses".chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
-        page.next_buf.put_cells(point, text);
-    }
-
-    fn render_divider(&self, page: &mut Screen, point: screen::Point) {
-        let cells = vec![screen::Cell::new('-', Color::White); page.rect.width().into()];
-        page.next_buf.put_cells(point, cells);
-    }
-
-    fn render_back(&self, page: &mut Screen, point: screen::Point) {
-        let cells = "..".chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
-        page.next_buf.put_cells(point.add(3, 0), cells);
-    }
-
-    fn render_selection_caret(&self, page: &mut Screen, point: screen::Point) {
-        let idx = match self.view {
-            View::Lessons => self.lessons_idx,
-            View::Quests => self.quests_idx,
-        };
-        let pnt = point.add(0, idx as u16);
-        page.next_buf.put_cell(pnt, screen::Cell::new('>', Color::White));
-    }
-
-    fn render_lessons(&self, page: &mut Screen, point: screen::Point) {
-        for (offset, lesson) in self.lessons.iter().enumerate() {
-            let point = point.add(3, offset as u16);
-            let cells = lesson.cmd.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
-            page.next_buf.put_cells(point, cells);
-        }
-    }
-
-    fn render_quests(&self, page: &mut Screen, point: screen::Point) {
-        for (offset, quest) in self.quests.iter().enumerate() {
-            let point = point.add(3, offset as u16);
-            let cells = quest.cmd_name.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
-            page.next_buf.put_cells(point, cells);
+    fn get_selection_idx(&self) -> u16 {
+        match self.view {
+            View::Lessons => self.lessons_idx as u16,
+            View::Quests => self.quests_idx as u16,
         }
     }
 
     fn render(&self, page: &mut Screen) {
+        let pnt = page.rect.top_left_padded();
+        render_header(&mut page.next_buf, pnt.add(0, 0));
+        render_divider(&mut page.next_buf, pnt.add(0, 3), page.rect.width().into());
+
         match self.view {
             View::Lessons => {
-                let pnt = page.rect.top_left_padded();
-                self.render_header(page, pnt.add(0, 0));
-                self.render_divider(page, pnt.add(0, 3));
-                self.render_lessons(page, pnt.add(0, 4));
-                self.render_selection_caret(page, pnt.add(0, 4)); 
-                let _ = page.stdout.queue(cursor::Hide);
+                render_lessons(&mut page.next_buf, pnt.add(0, 4), &self.lessons);
             },
             View::Quests => {
-                let pnt = page.rect.top_left_padded();
-                self.render_header(page, pnt.add(0, 0));
-                self.render_divider(page, pnt.add(0, 3));
-                self.render_back(page, pnt.add(0, 4));
-                self.render_quests(page, pnt.add(0, 5));
-                self.render_selection_caret(page, pnt.add(0, 4)); 
-                let _ = page.stdout.queue(cursor::Hide);
+                render_quests(&mut page.next_buf, pnt.add(0, 4), &self.quests);
             }
         }
+
+        render_selection_caret(&mut page.next_buf, pnt.add(0, 4), self.get_selection_idx()); 
+        let _ = page.stdout.queue(cursor::Hide);
+    }
+}
+
+/// Header 
+/// Your available courses:
+///
+///
+///
+fn render_header(buf: &mut screen::ScreenBuf, point: screen::Point) {
+    let text = "Your available courses"
+        .chars()
+        .map(|ch| screen::Cell::new(ch, Color::White))
+        .collect();
+
+    buf.put_cells(point, text);
+}
+
+/// Divider
+/// ----------------------------------------------------
+fn render_divider(buf: &mut screen::ScreenBuf, point: screen::Point, screen_width: usize) {
+    let cells = vec![screen::Cell::new('-', Color::White); screen_width];
+    buf.put_cells(point, cells);
+}
+
+/// Selection caret
+/// > 
+fn render_selection_caret(buf: &mut screen::ScreenBuf, point: screen::Point, idx: u16) {
+    let pnt = point.add(0, idx);
+    buf.put_cell(pnt, screen::Cell::new('>', Color::White));
+}
+
+/// Lessons
+///   name
+///   name
+///   name
+fn render_lessons(buf: &mut screen::ScreenBuf, point: screen::Point, lessons: &Vec<models::Lesson>) {
+    for (offset, lesson) in lessons.iter().enumerate() {
+        let point = point.add(3, offset as u16);
+        let cells = lesson.cmd.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+        buf.put_cells(point, cells);
+    }
+}
+
+/// quests
+///   ..
+///   name
+///   name
+fn render_quests(buf: &mut screen::ScreenBuf, point: screen::Point, quests: &Vec<models::Quest>) {
+    let cells = "..".chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+    buf.put_cells(point.add(3, 0), cells);
+
+    for (offset, quest) in quests.iter().enumerate() {
+        let point = point.add(3, (offset + 1) as u16);
+        let cells = quest.cmd_name.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+        buf.put_cells(point, cells);
     }
 }
 
