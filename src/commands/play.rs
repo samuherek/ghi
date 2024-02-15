@@ -1,9 +1,9 @@
 use std::{fs, thread, mem};
 use std::path::PathBuf;
 use std::io::{self, stdout, Write};
-use crate::parser::{CmdParser, CmdWord};
-use crate::input_lexer::InputCmdLexer;
-use crate::compare::match_schema;
+use crate::parser::parser::{CmdParser, CmdWord};
+use crate::parser::input_lexer::InputCmdLexer;
+use crate::parser::compare::match_schema;
 use crossterm::{execute, cursor, style,QueueableCommand};
 use crossterm::event::{self, KeyCode, KeyModifiers, Event, poll, read, KeyEventKind};
 use crossterm::terminal::{self, LeaveAlternateScreen, Clear, ClearType, EnterAlternateScreen};

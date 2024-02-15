@@ -1,5 +1,5 @@
-use super::parser::CmdWord;
-use super::input_lexer::Token;
+use crate::parser::parser::CmdWord;
+use crate::parser::input_lexer::Token;
 
 //
 // schema: git add .
@@ -163,8 +163,8 @@ pub fn match_schema(ast: &Vec<CmdWord>, tokens: &Vec<Token>, ast_idx: usize, tok
 
 mod tests {
     use super::*;
-    use crate::parser::CmdParser;
-    use crate::input_lexer::InputCmdLexer;
+    use crate::parser::parser::CmdParser;
+    use crate::parser::input_lexer::InputCmdLexer;
 
     #[test]
     fn match_single_item() {

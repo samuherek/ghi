@@ -1,4 +1,4 @@
-use crate::lexer::{Token, CmdLexer};
+use super::lexer::{Token, CmdLexer};
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
