@@ -6,9 +6,9 @@ use crossterm::QueueableCommand;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Cell {
-    ch: char,
-    fg: style::Color,
-    bg: Option<style::Color>
+    pub ch: char,
+    pub fg: style::Color,
+    pub bg: Option<style::Color>
 }
 
 impl Cell {
@@ -223,9 +223,9 @@ impl GhiDebug for Rect {
 
 #[derive(Debug)]
 pub struct Patch {
-    cell: Cell,
-    x: usize,
-    y: usize
+    pub cell: Cell,
+    pub x: usize,
+    pub y: usize
 }
 
 #[derive(Debug)]

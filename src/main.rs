@@ -24,6 +24,7 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     Add { value: Option<String> },
+    Manage,
     // List, 
     // Flash,
     // Tmux,
@@ -37,6 +38,7 @@ fn main() -> anyhow::Result<()>{
 
     match &cli.command {
         Some(Commands::Add{value}) => commands::add::run(&mut conn, value)?,
+        Some(Commands::Manage) => commands::manage::run(&mut conn)?,
         // Some(Commands::List) => commands::list::run()?,
         // Some(Commands::Test) => commands::test::run()?,
         // Some(Commands::Tmux) => commands::tmux::run()?,
