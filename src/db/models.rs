@@ -48,7 +48,7 @@ pub struct Lesson {
 
 #[derive(Insertable)]
 #[diesel(table_name = lessons)]
-pub struct NewCourse<'a> {
+pub struct NewLesson<'a> {
     pub cmd: &'a str,
     pub name: &'a str,
     pub description: &'a str,
