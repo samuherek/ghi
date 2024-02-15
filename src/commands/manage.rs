@@ -9,9 +9,17 @@ use crate::db::models;
 fn query_lessons(conn: &mut SqliteConnection) -> Vec<models::Lesson> {
     use diesel::prelude::*;
     use crate::db::schema::lessons::dsl::*;
+    lessons.get_results(conn).expect("Getting lessons faild")
+}
 
-    let res = lessons.get_results(conn).expect("Getting lessons faild");
-    res
+fn query_quests(conn: &mut SqliteConnection, les_id: i32) -> Vec<models::Quest> {
+    use diesel::prelude::*;
+    use crate::db::schema::quests::dsl::*;
+    quests
+        .filter(lesson_id.eq(les_id))
+        .filter(cmd_pattern.is_not(""))
+        .get_results(conn)
+        .expect("Getting quests faild")
 }
 
 enum View {
@@ -70,10 +78,18 @@ impl State {
         }
     }
 
-    fn select(&mut self) {
+    fn select(&mut self, conn: &mut SqliteConnection) {
         match self.view {
-            View::Lessons => self.view = View::Quests,
-            View::Quests => self.view = View::Lessons,
+            View::Lessons => {
+                self.view = View::Quests;
+                let id = self.lessons[self.lessons_idx].id;
+                self.quests = query_quests(conn, id);
+            },
+            View::Quests => {
+                if self.quests_idx == 0 {
+                    self.view = View::Lessons;
+                } 
+            }
         }
     }
 
@@ -102,6 +118,48 @@ impl State {
         let _ = page.stdout.queue(cursor::Hide);
     }
 }
+
+
+
+// TODO: for the help stuff
+//
+// let col_num = 32;
+// qc.queue(cursor::MoveTo(0, self.help_line_count))?;
+// qc.queue(style::Print("Help"))?;
+//
+// self.help_line_count += 1; 
+//
+// qc.queue(cursor::MoveTo(0, self.help_line_count))?;
+// qc.queue(style::Print("To quite the program:"))?;
+// qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
+// qc.queue(style::Print("CTRL + c"))?;
+// self.help_line_count += 1; 
+//
+// qc.queue(cursor::MoveTo(0, self.help_line_count))?;
+// qc.queue(style::Print("Up:"))?;
+// qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
+// qc.queue(style::Print("CTRL + p"))?;
+// self.help_line_count += 1; 
+//
+// qc.queue(cursor::MoveTo(0, self.help_line_count))?;
+// qc.queue(style::Print("Down:"))?;
+// qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
+// qc.queue(style::Print("CTRL + n"))?;
+// self.help_line_count += 1; 
+//
+// qc.queue(cursor::MoveTo(0, self.help_line_count))?;
+// qc.queue(style::Print("Select line:"))?;
+// qc.queue(cursor::MoveTo(col_num, self.help_line_count))?;
+// qc.queue(style::Print("enter"))?;
+// self.help_line_count += 1; 
+//
+// for col in 0..cols {
+//     qc.queue(cursor::MoveTo(col, self.help_line_count))?;
+//     qc.queue(style::Print("-"))?;
+// }
+// self.help_line_count += 1; 
+// qc.flush()?;
+
 
 /// Header 
 /// Your available courses:
@@ -153,7 +211,7 @@ fn render_quests(buf: &mut screen::ScreenBuf, point: screen::Point, quests: &Vec
 
     for (offset, quest) in quests.iter().enumerate() {
         let point = point.add(3, (offset + 1) as u16);
-        let cells = quest.cmd_name.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+        let cells = quest.cmd_pattern.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
         buf.put_cells(point, cells);
     }
 }
@@ -264,7 +322,7 @@ pub fn run(conn: &mut SqliteConnection) -> std::io::Result<()> {
                         },
                         KeyCode::Up => state.select_up(),
                         KeyCode::Down => state.select_down(),
-                        KeyCode::Enter => state.select(),
+                        KeyCode::Enter => state.select(conn),
                         _ => {}
                     }
                 },

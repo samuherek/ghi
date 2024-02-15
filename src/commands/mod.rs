@@ -1,6 +1,3 @@
-pub mod test;
-pub mod list;
-pub mod tmux;
+pub mod play;
 pub mod add;
-pub mod interaction;
 pub mod manage;

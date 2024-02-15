@@ -9,8 +9,6 @@ mod screen;
 mod db;
 
 use clap::{Parser, Subcommand};
-use rand::seq::SliceRandom;
-use store::Store;
 
 #[derive(Parser)]
 #[command(author = "Sam Uherek <samuherekbiz@gmail.com>")]
@@ -25,10 +23,7 @@ pub struct Cli {
 pub enum Commands {
     Add { value: Option<String> },
     Manage,
-    // List, 
-    // Flash,
-    // Tmux,
-    // Test
+    Play
 }
 
 fn main() -> anyhow::Result<()>{
@@ -39,25 +34,10 @@ fn main() -> anyhow::Result<()>{
     match &cli.command {
         Some(Commands::Add{value}) => commands::add::run(&mut conn, value)?,
         Some(Commands::Manage) => commands::manage::run(&mut conn)?,
-        // Some(Commands::List) => commands::list::run()?,
-        // Some(Commands::Test) => commands::test::run()?,
-        // Some(Commands::Tmux) => commands::tmux::run()?,
-        // Some(Commands::Flash) => {
-        //     let mut store = Store::new();
-        //     store.init_database()?;
-        //
-        //     let list = store.db_take(None);
-        //     if let Some(val) = list.choose(&mut rand::thread_rng()) {
-        //         println!("{val}");
-        //     }  else {
-        //         eprintln!("The list is empty");
-        //     }
-        //
-        // },
+        Some(Commands::Play) => commands::play::run()?,
         None => {
-            println!("we are running!");
+            unimplemented!();
         }
-        // None => commands::interaction::run()?,
     }
 
     return Ok(());
