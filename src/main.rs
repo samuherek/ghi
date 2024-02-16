@@ -4,6 +4,8 @@ mod screen;
 mod db;
 
 use clap::{Parser, Subcommand};
+use simplelog::{WriteLogger, LevelFilter, Config};
+use log::info;
 
 #[derive(Parser)]
 #[command(author = "Sam Uherek <samuherekbiz@gmail.com>")]
@@ -25,6 +27,11 @@ pub enum Commands {
 }
 
 fn main() -> anyhow::Result<()>{
+    let log_file = std::fs::File::create("log.txt").expect("Could not create the log file");
+    WriteLogger::init(LevelFilter::max(), Config::default(), log_file).unwrap();
+
+    info!("Application started");
+
     let cli = Cli::parse();
     let mut conn = db::establish_connection();
     db::ensure_tables(&mut conn);

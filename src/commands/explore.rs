@@ -5,26 +5,65 @@ use crossterm::style::Color;
 use crate::screen;
 use std::io::Write;
 use crate::db::models;
+use log::{info, error};
 
 fn query_lessons(conn: &mut SqliteConnection) -> Vec<models::Lesson> {
     use diesel::prelude::*;
     use crate::db::schema::lessons::dsl::*;
-    lessons.get_results(conn).expect("Getting lessons faild")
+
+    info!("Query the lessons");
+
+    let res = lessons.get_results(conn)
+        .map_err(|err| {
+            error!("Error running the query lessons: {:?}", err);
+        }).unwrap();
+
+    info!("DB: lessons: {:?}", res.len());
+
+    res
 }
 
-fn query_quests(conn: &mut SqliteConnection, les_id: i32) -> Vec<models::Quest> {
+fn query_quests(conn: &mut SqliteConnection, id: i32) -> Vec<models::Quest> {
     use diesel::prelude::*;
-    use crate::db::schema::quests::dsl::*;
-    quests
-        .filter(lesson_id.eq(les_id))
-        .filter(pattern.is_not(""))
+    use crate::db::schema::quests::dsl;
+
+    info!("Query the quests wiht lesson id {}", id);
+
+    let res = dsl::quests
+        .filter(dsl::lesson_id.eq(id))
+        .filter(dsl::pattern.is_not(""))
         .get_results(conn)
-        .expect("Getting quests faild")
+        .map_err(|err| {
+            error!("Error running the query quests: {:?}", err);
+        }).unwrap();
+
+    info!("DB: quests: {:?}", res.len());
+
+    res
+}
+
+fn query_quest(conn: &mut SqliteConnection, id: i32) -> Option<models::Quest> {
+    use diesel::prelude::*;
+    use crate::db::schema::quests::dsl;
+
+    info!("Query the quest wiht id {}", id);
+
+    let res = dsl::quests
+        .find(id)
+        .first(conn)
+        .map_err(|err| {
+            error!("Error runing the query quest: {:?}", err);
+        }).unwrap();
+
+    info!("DB: quest done");
+
+    Some(res) 
 }
 
 enum View {
     Lessons,
-    Quests
+    Quests,
+    Quest
 }
 
 struct State {
@@ -32,6 +71,7 @@ struct State {
     quests_idx: usize,
     lessons: Vec<models::Lesson>,
     quests: Vec<models::Quest>,
+    quest: Option<models::Quest>,
     view: View
 }
 
@@ -44,6 +84,7 @@ impl State {
             quests_idx: 0,
             lessons,
             quests: Vec::new(),
+            quest: None,
             view: View::Lessons
         }
     }
@@ -52,6 +93,7 @@ impl State {
         match self.view {
             View::Lessons => self.lessons_idx = self.lessons_idx.saturating_sub(1),
             View::Quests => self.quests_idx = self.quests_idx.saturating_sub(1),
+            _ => {}
         }
     }
 
@@ -74,7 +116,8 @@ impl State {
                     self.quests_idx + 1
                 };
                 self.quests_idx = max_len;
-            }
+            },
+            _ => {}
         }
     }
 
@@ -83,12 +126,28 @@ impl State {
             View::Lessons => {
                 self.view = View::Quests;
                 let id = self.lessons[self.lessons_idx].id;
+                info!("Switch to quests with lesson_id: {}", id);
                 self.quests = query_quests(conn, id);
             },
             View::Quests => {
                 if self.quests_idx == 0 {
+                    info!("Switch to lessons");
                     self.view = View::Lessons;
-                } 
+                } else {
+                    self.view = View::Quest;
+                    info!("We are about to get the quest id, {}", self.quests_idx);
+                    if let Some(quest) = self.quests.get(self.quests_idx - 1) {
+                        info!("We are going to render quest with id {}", quest.id);
+                        self.quest = query_quest(conn, quest.id);
+                    } else {
+                        error!("Could not find the quest with index {}", self.quests_idx - 1);
+                    }
+                }
+            },
+            View::Quest => {
+                info!("Switch to Quests");
+                self.view = View::Quests;
+                self.quest = None;
             }
         }
     }
@@ -97,6 +156,7 @@ impl State {
         match self.view {
             View::Lessons => self.lessons_idx as u16,
             View::Quests => self.quests_idx as u16,
+            View::Quest => 0 
         }
     }
 
@@ -111,6 +171,9 @@ impl State {
             },
             View::Quests => {
                 render_quests(&mut page.next_buf, pnt.add(0, 4), &self.quests);
+            },
+            View::Quest => {
+                render_quest(&mut page.next_buf, pnt.add(0, 4), &self.quest);
             }
         }
 
@@ -216,6 +279,23 @@ fn render_quests(buf: &mut screen::ScreenBuf, point: screen::Point, quests: &Vec
     }
 }
 
+fn render_quest(buf: &mut screen::ScreenBuf, point: screen::Point, quest: &Option<models::Quest>) {
+    let cells = "..".chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+    buf.put_cells(point.add(3, 0), cells);
+
+    if let Some(quest) = quest {
+        let cmd = quest.cmd.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+        buf.put_cells(point.add(0, 2), cmd);
+    } else {
+        let text = "Not found id"
+            .chars()
+            .map(|ch| screen::Cell::new(ch, Color::White))
+            .collect();
+
+        buf.put_cells(point.add(0, 2), text);
+    }
+}
+
 struct Screen {
     stdout: std::io::Stdout,
     quit: bool,
@@ -300,6 +380,8 @@ impl Drop for Screen {
 pub fn run(conn: &mut SqliteConnection) -> std::io::Result<()> {
     let mut state = State::new(conn);
     let mut page = Screen::start()?;
+
+    info!("Start explore command");
 
     while !page.quit {
         while poll(std::time::Duration::ZERO)? {
