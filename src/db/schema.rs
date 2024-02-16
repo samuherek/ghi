@@ -15,9 +15,10 @@ diesel::table! {
 diesel::table! {
     quests (id) {
         id -> Integer,
-        cmd_name -> Text,
-        cmd_pattern -> Text,
-        cmd_quest -> Text,
+        cmd -> Text,
+        pattern -> Text,
+        is_pattern_literal -> Bool,
+        quest -> Text,
         notes -> Nullable<Text>,
         mock_output -> Nullable<Text>,
         display_count -> Integer,

@@ -1,3 +1,3 @@
-pub mod play;
+pub mod run;
 pub mod add;
-pub mod manage;
+pub mod explore;

@@ -1,9 +1,10 @@
 -- Your SQL goes here
 CREATE TABLE quests (
     id INTEGER PRIMARY KEY NOT NULL,
-    cmd_name VARCHAR NOT NULL,
-    cmd_pattern VARCHAR NOT NULL,
-    cmd_quest VARCHAR NOT NULL,
+    cmd VARCHAR NOT NULL,
+    pattern VARCHAR NOT NULL,
+    is_pattern_literal BOOLEAN NOT NULL CHECK (is_pattern_literal IN (0, 1)),
+    quest VARCHAR NOT NULL,
     notes VARCHAR,
     mock_output VARCHAR,
     display_count INTEGER NOT NULL DEFAULT 0,

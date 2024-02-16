@@ -16,9 +16,12 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    /// Add a new command to the default list
     Add { value: Option<String> },
-    Manage,
-    Play
+    /// Start an explorer to see all the commands 
+    Explore,
+    /// Start the flashcard game
+    Run
 }
 
 fn main() -> anyhow::Result<()>{
@@ -28,8 +31,8 @@ fn main() -> anyhow::Result<()>{
 
     match &cli.command {
         Some(Commands::Add{value}) => commands::add::run(&mut conn, value)?,
-        Some(Commands::Manage) => commands::manage::run(&mut conn)?,
-        Some(Commands::Play) => commands::play::run()?,
+        Some(Commands::Explore) => commands::explore::run(&mut conn)?,
+        Some(Commands::Run) => commands::run::run()?,
         None => {
             unimplemented!();
         }

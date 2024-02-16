@@ -88,9 +88,10 @@ pub fn run(conn: &mut SqliteConnection, value: &Option<String>) -> Result<()> {
     let lesson_id = get_default_lesson(conn);
 
     let new_quest = NewQuest {
-       cmd_name: &name,
-       cmd_quest: &quest,
-       cmd_pattern: &pattern,
+       cmd: &name,
+       quest: &quest,
+       pattern: &pattern,
+       is_pattern_literal: false,
        notes: &note,
        lesson_id
     };

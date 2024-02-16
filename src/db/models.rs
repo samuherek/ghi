@@ -9,9 +9,10 @@ use crate::db::schema::lessons;
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Quest {
     pub id: i32,
-    pub cmd_name: String,
-    pub cmd_pattern: String,
-    pub cmd_quest: String,
+    pub cmd: String,
+    pub pattern: String,
+    pub is_pattern_literal: bool,
+    pub quest: String,
     pub notes: Option<String>,
     pub mock_output: Option<String>,
     pub display_count: i32,
@@ -25,9 +26,10 @@ pub struct Quest {
 #[derive(Insertable)]
 #[diesel(table_name = quests)]
 pub struct NewQuest<'a> {
-    pub cmd_name: &'a str,
-    pub cmd_pattern: &'a str,
-    pub cmd_quest: &'a str,
+    pub cmd: &'a str,
+    pub pattern: &'a str,
+    pub quest: &'a str,
+    pub is_pattern_literal: bool,
     pub notes: &'a str,
     pub lesson_id: i32,
 }

@@ -17,7 +17,7 @@ fn query_quests(conn: &mut SqliteConnection, les_id: i32) -> Vec<models::Quest> 
     use crate::db::schema::quests::dsl::*;
     quests
         .filter(lesson_id.eq(les_id))
-        .filter(cmd_pattern.is_not(""))
+        .filter(pattern.is_not(""))
         .get_results(conn)
         .expect("Getting quests faild")
 }
@@ -211,7 +211,7 @@ fn render_quests(buf: &mut screen::ScreenBuf, point: screen::Point, quests: &Vec
 
     for (offset, quest) in quests.iter().enumerate() {
         let point = point.add(3, (offset + 1) as u16);
-        let cells = quest.cmd_pattern.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+        let cells = quest.pattern.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
         buf.put_cells(point, cells);
     }
 }
