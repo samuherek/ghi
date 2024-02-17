@@ -1,6 +1,6 @@
 mod parser;
 mod commands;
-mod screen;
+mod window;
 mod db;
 
 use clap::{Parser, Subcommand};

@@ -2,7 +2,7 @@ use diesel::SqliteConnection;
 use crossterm::{execute, terminal, QueueableCommand, cursor};
 use crossterm::event::{poll, read, Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::style::Color;
-use crate::screen;
+use crate::window::{ScreenBuf, Cell, Point, Patch, Rect};
 use std::io::Write;
 use crate::db::models;
 use log::{info, error};
@@ -229,10 +229,10 @@ impl State {
 ///
 ///
 ///
-fn render_header(buf: &mut screen::ScreenBuf, point: screen::Point) {
+fn render_header(buf: &mut ScreenBuf, point: Point) {
     let text = "Your available courses"
         .chars()
-        .map(|ch| screen::Cell::new(ch, Color::White))
+        .map(|ch| Cell::new(ch, Color::White))
         .collect();
 
     buf.put_cells(point, text);
@@ -240,26 +240,26 @@ fn render_header(buf: &mut screen::ScreenBuf, point: screen::Point) {
 
 /// Divider
 /// ----------------------------------------------------
-fn render_divider(buf: &mut screen::ScreenBuf, point: screen::Point, screen_width: usize) {
-    let cells = vec![screen::Cell::new('-', Color::White); screen_width];
+fn render_divider(buf: &mut ScreenBuf, point: Point, screen_width: usize) {
+    let cells = vec![Cell::new('-', Color::White); screen_width];
     buf.put_cells(point, cells);
 }
 
 /// Selection caret
 /// > 
-fn render_selection_caret(buf: &mut screen::ScreenBuf, point: screen::Point, idx: u16) {
+fn render_selection_caret(buf: &mut ScreenBuf, point: Point, idx: u16) {
     let pnt = point.add(0, idx);
-    buf.put_cell(pnt, screen::Cell::new('>', Color::White));
+    buf.put_cell(pnt, Cell::new('>', Color::White));
 }
 
 /// Lessons
 ///   name
 ///   name
 ///   name
-fn render_lessons(buf: &mut screen::ScreenBuf, point: screen::Point, lessons: &Vec<models::Lesson>) {
+fn render_lessons(buf: &mut ScreenBuf, point: Point, lessons: &Vec<models::Lesson>) {
     for (offset, lesson) in lessons.iter().enumerate() {
         let point = point.add(3, offset as u16);
-        let cells = lesson.cmd.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+        let cells = lesson.cmd.chars().map(|ch| Cell::new(ch, Color::White)).collect();
         buf.put_cells(point, cells);
     }
 }
@@ -268,28 +268,28 @@ fn render_lessons(buf: &mut screen::ScreenBuf, point: screen::Point, lessons: &V
 ///   ..
 ///   name
 ///   name
-fn render_quests(buf: &mut screen::ScreenBuf, point: screen::Point, quests: &Vec<models::Quest>) {
-    let cells = "..".chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+fn render_quests(buf: &mut ScreenBuf, point: Point, quests: &Vec<models::Quest>) {
+    let cells = "..".chars().map(|ch| Cell::new(ch, Color::White)).collect();
     buf.put_cells(point.add(3, 0), cells);
 
     for (offset, quest) in quests.iter().enumerate() {
         let point = point.add(3, (offset + 1) as u16);
-        let cells = quest.pattern.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+        let cells = quest.pattern.chars().map(|ch| Cell::new(ch, Color::White)).collect();
         buf.put_cells(point, cells);
     }
 }
 
-fn render_quest(buf: &mut screen::ScreenBuf, point: screen::Point, quest: &Option<models::Quest>) {
-    let cells = "..".chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+fn render_quest(buf: &mut ScreenBuf, point: Point, quest: &Option<models::Quest>) {
+    let cells = "..".chars().map(|ch| Cell::new(ch, Color::White)).collect();
     buf.put_cells(point.add(3, 0), cells);
 
     if let Some(quest) = quest {
-        let cmd = quest.cmd.chars().map(|ch| screen::Cell::new(ch, Color::White)).collect();
+        let cmd = quest.cmd.chars().map(|ch| Cell::new(ch, Color::White)).collect();
         buf.put_cells(point.add(0, 2), cmd);
     } else {
         let text = "Not found id"
             .chars()
-            .map(|ch| screen::Cell::new(ch, Color::White))
+            .map(|ch| Cell::new(ch, Color::White))
             .collect();
 
         buf.put_cells(point.add(0, 2), text);
@@ -299,11 +299,11 @@ fn render_quest(buf: &mut screen::ScreenBuf, point: screen::Point, quest: &Optio
 struct Screen {
     stdout: std::io::Stdout,
     quit: bool,
-    curr_buf: screen::ScreenBuf, 
-    next_buf: screen::ScreenBuf,
+    curr_buf: ScreenBuf, 
+    next_buf: ScreenBuf,
     width: u16,
     height: u16,
-    rect: screen::Rect,
+    rect: Rect,
 }
 
 impl Screen {
@@ -312,14 +312,14 @@ impl Screen {
         let mut stdout = std::io::stdout();
         execute!(stdout, terminal::EnterAlternateScreen)?;
         let (width, height) = terminal::size()?;
-        let mut rect = screen::Rect::default();
+        let mut rect = Rect::default();
         rect.set_dimensions(width, height);
 
         Ok(Self {
             stdout,
             quit: false,
-            curr_buf: screen::ScreenBuf::new(width, height),
-            next_buf: screen::ScreenBuf::new(width, height),
+            curr_buf: ScreenBuf::new(width, height),
+            next_buf: ScreenBuf::new(width, height),
             width,
             height,
             rect
@@ -340,7 +340,7 @@ impl Screen {
        use crossterm::style::{SetBackgroundColor, SetForegroundColor, Print, ResetColor};
        let diff = self.curr_buf.diff(&self.next_buf);
 
-       for screen::Patch{ cell: screen::Cell{ ch, fg, bg }, x, y } in diff {
+       for Patch{ cell: Cell{ ch, fg, bg }, x, y } in diff {
            self.stdout.queue(MoveTo(x as u16, y as u16))?;
            if let Some(bg) = bg {
                self.stdout.queue(SetBackgroundColor(bg))?;

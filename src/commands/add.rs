@@ -6,7 +6,7 @@ use diesel::RunQueryDsl;
 use diesel;
 use diesel::SqliteConnection;
 use crossterm;
-use crate::screen;
+use crate::window::Screen;
 
 fn get_default_lesson(conn: &mut SqliteConnection) -> i32 {
     use diesel::prelude::*;
@@ -20,17 +20,17 @@ fn read_input() -> Result<String> {
     use std::io::Write;
 
     let mut stdout = std::io::stdout();
-    let mut page = screen::Screen::start()?;
+    let mut page = Screen::start()?;
 
     let mut answer = String::new();
-    while !page.quit {
+    while !page.get_quit() {
         while event::poll(std::time::Duration::ZERO)? {
             match event::read()? {
                 event::Event::Key(ev) if ev.kind == event::KeyEventKind::Press => {
                     match ev.code {
                         event::KeyCode::Char(ch) => {
                             if ev.modifiers.contains(event::KeyModifiers::CONTROL) && ch == 'c' {
-                                page.quit = true;
+                                page.set_quit();
                                 std::process::exit(1);
                             } else {
                                 print!("{ch}");
@@ -38,7 +38,7 @@ fn read_input() -> Result<String> {
                                 answer.push(ch);
                             }
                         },
-                        event::KeyCode::Enter => page.quit(),
+                        event::KeyCode::Enter => page.set_quit(), 
                         event::KeyCode::Backspace => { 
                             answer.pop(); 
                             execute!(stdout, terminal::Clear(terminal::ClearType::CurrentLine))?;

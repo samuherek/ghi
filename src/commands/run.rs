@@ -4,12 +4,12 @@ use std::io::{self, stdout, Write};
 use crate::parser::parser::{CmdParser, CmdWord};
 use crate::parser::input_lexer::InputCmdLexer;
 use crate::parser::compare::match_schema;
-use crossterm::{execute, cursor, style,QueueableCommand};
-use crossterm::event::{self, KeyCode, KeyModifiers, Event, poll, read, KeyEventKind};
-use crossterm::terminal::{self, LeaveAlternateScreen, Clear, ClearType, EnterAlternateScreen};
+use crossterm::{ cursor, style,QueueableCommand};
+use crossterm::event::{ KeyCode, KeyModifiers, Event, poll, read, KeyEventKind};
+use crossterm::terminal;
 use anyhow;
 use std::time::Duration;
-use crate::screen::{Screen, ScreenBuf, Point, Cell, Rect, apply_patches, GhiDebug};
+use crate::window::{Screen, ScreenBuf, Cell, Rect, apply_patches};
 
 
 
@@ -263,7 +263,7 @@ pub fn run() -> anyhow::Result<()>{
     let mut prompt = Prompt::new(title, cmd);
     prompt.resize(term_w, term_h);
 
-    while !screen.quit {
+    while !screen.get_quit() {
         while poll(Duration::ZERO)? {
             match read()? {
                 Event::Resize(next_width, next_height) => {
@@ -278,7 +278,7 @@ pub fn run() -> anyhow::Result<()>{
                     match event.code {
                         KeyCode::Char(x) => {
                             if event.modifiers.contains(KeyModifiers::CONTROL) && x == 'c' {
-                                screen.quit = true;
+                                screen.set_quit();
                             } else {
                                 prompt.append_input(x);
                             }
@@ -292,7 +292,7 @@ pub fn run() -> anyhow::Result<()>{
                             } else {
                                 cmd_idx += 1;
                                 if cmd_idx > cmds.len() {
-                                    screen.quit = true;
+                                    screen.set_quit();
                                 } else {
                                     let (t, c) = cmds.get(cmd_idx).unwrap();
                                     prompt.set_question(t, c);
