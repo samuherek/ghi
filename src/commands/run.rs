@@ -255,6 +255,7 @@ pub fn run() -> anyhow::Result<()>{
     let debug = true;
     let mut stdout = stdout();
     let mut screen = Screen::start()?;
+    let _ = screen.with_altenrate()?;
     let (mut term_w, mut term_h) = terminal::size()?;
     let mut curr_buf = ScreenBuf::new(term_w.into(), term_h.into());
     let mut next_buf = ScreenBuf::new(term_w.into(), term_h.into());
