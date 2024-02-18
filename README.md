@@ -24,6 +24,13 @@ Access interactive adding and removing from `bash_history` or `zsh_history`
 $ ghi
 ```
 
+-----
+
+Pattern matching to read:
+- https://spacy.io/usage/rule-based-matching/
+- https://www.geeksforgeeks.org/introduction-to-pattern-searching-data-structure-and-algorithm-tutorial/?ref=lbp
+- https://www.geeksforgeeks.org/convert-infix-expression-to-postfix-expression/
+
 
 ### TODO:
 
