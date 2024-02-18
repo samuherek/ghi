@@ -26,10 +26,6 @@ $ ghi
 
 -----
 
-Sudoku info:
-- https://www.sudokuwiki.org/Sudoku_Creation_and_Grading.pdf
-- 
-
 Pattern matching to read:
 - https://spacy.io/usage/rule-based-matching/
 - https://www.geeksforgeeks.org/introduction-to-pattern-searching-data-structure-and-algorithm-tutorial/?ref=lbp
