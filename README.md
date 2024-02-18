@@ -26,10 +26,19 @@ $ ghi
 
 -----
 
+Sudoku info:
+- https://www.sudokuwiki.org/Sudoku_Creation_and_Grading.pdf
+- 
+
 Pattern matching to read:
 - https://spacy.io/usage/rule-based-matching/
 - https://www.geeksforgeeks.org/introduction-to-pattern-searching-data-structure-and-algorithm-tutorial/?ref=lbp
 - https://www.geeksforgeeks.org/convert-infix-expression-to-postfix-expression/
+
+Regex engine 
+- https://deniskyashif.com/2020/08/17/parsing-regex-with-recursive-descent/
+- https://deniskyashif.com/2019/02/17/implementing-a-regular-expression-engine/
+- 
 
 
 ### TODO:
