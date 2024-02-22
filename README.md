@@ -39,10 +39,12 @@ Regex engine
 
 ### TODO:
 
-[ /] responsive resizing of the terminal and the text wrapping/cutting/...
+- [ ] Create a "bucket" where we can slip any "future" commands to learn and configure to learn. Like a reading list. It's great if you don't knwo what you want to do but want to add some commands to look into the next time. this would require two steps: 1. put things into a bucket 2. review/edit and move the item into a lesson
+
+- [ ] responsive resizing of the terminal and the text wrapping/cutting/...
 
 
-[ ] interactive add of a command 
+- [ ] interactive add of a command 
      - it will trigger an editor to add description
      - it will trigger an editor to provide translation of the command into a command language "ghi" uses internally
 Example:
@@ -52,35 +54,35 @@ should be converted to this
 This is to remove any kind of sensitive information, and it makes it much easier for ghi to parse it correctly and provide test feedback like duolingo
 
 
-[ ] basic flashcard -> I'm working on this now
+- [ ] basic flashcard -> I'm working on this now
     - Creating a comperator function that walks the ASTs and compares them. 
     - I should use the same idea how regular expressions work behind the scene. A state machine with backtracing to walk through the optional parts. 
 
-[ ] create a configuration object that sets the storage path (I want to add it to synology to share across computers)
+- [ ] create a configuration object that sets the storage path (I want to add it to synology to share across computers)
 
 
 ### DONE
-[-] render the question/success/failure/ in a box in the middle of the screen
+- [-] render the question/success/failure/ in a box in the middle of the screen
 
-[-] Setup a cursor tracking and syncing with the new diff
+- [-] Setup a cursor tracking and syncing with the new diff
 
-[-] remove items from the existing list.
+- [-] remove items from the existing list.
 
-[-] add command to add custom command from input
+- [-] add command to add custom command from input
 
-[-] remove duplicates from the history
+- [-] remove duplicates from the history
 
-[-] hitting enter in the search list will add it in and out of the list.
+- [-] hitting enter in the search list will add it in and out of the list.
 
-[-] add a list command to list all available commands and search through them
+- [-] add a list command to list all available commands and search through them
 
-[-] highlight the already selected commands in the search list.
+- [-] highlight the already selected commands in the search list.
 
-[-] removing query to emtpy one does not reset the serach after the 1 char left.
+- [-] removing query to emtpy one does not reset the serach after the 1 char left.
 
-[-] enter submits the comand and saves it into .config files
+- [-] enter submits the comand and saves it into .config files
 
-[-] add the build binary to my paths so I can start using it on the laptop
+- [-] add the build binary to my paths so I can start using it on the laptop
 
 
 ### Not applicable
@@ -103,3 +105,4 @@ Also, I can commit this to git repo for future reference and easy laoding on a d
 Additional features:
 - Add a command manually without the history search (TODO)
 - ...
+  
