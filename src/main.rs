@@ -20,6 +20,8 @@ pub struct Cli {
 pub enum Commands {
     /// Add a new command to the default list
     Add { value: Option<String> },
+    /// Add a value to a TODO to revisit later
+    Bucket { value: Option<String>},
     /// Start an explorer to see all the commands 
     Explore,
     /// Start the flashcard game
@@ -38,6 +40,7 @@ fn main() -> anyhow::Result<()>{
 
     match &cli.command {
         Some(Commands::Add{value}) => commands::add::run(&mut conn, value)?,
+        Some(Commands::Bucket{value}) => commands::bucket::run(&mut conn, value)?,
         Some(Commands::Explore) => commands::explore::run(&mut conn)?,
         Some(Commands::Run) => commands::run::run()?,
         None => {
