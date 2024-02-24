@@ -1,6 +1,16 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    bucket (id) {
+        id -> Integer,
+        value -> Text,
+        notes -> Nullable<Text>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     lessons (id) {
         id -> Integer,
         name -> Text,
@@ -33,6 +43,7 @@ diesel::table! {
 diesel::joinable!(quests -> lessons (lesson_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    bucket,
     lessons,
     quests,
 );

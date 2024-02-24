@@ -6,6 +6,7 @@ use diesel::sqlite::SqliteConnection;
 use std::env;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dirs;
+use log::info;
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
@@ -17,9 +18,11 @@ pub fn establish_connection() -> SqliteConnection {
         }
     });
 
+    info!("Setup database connection");
     let mut connection = SqliteConnection::establish(&database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
 
+    info!("Run pending mutations.");
     if let Err(e) = connection.run_pending_migrations(MIGRATIONS) {
         panic!("Failed to run migrations with error: {}", e);
     }
@@ -31,6 +34,8 @@ pub fn ensure_tables(con: &mut SqliteConnection) {
     use crate::db::schema::lessons;
     use crate::db::schema::lessons::dsl::*;
     use crate::db::models::NewLesson;
+
+    info!("DB: ensure the base tables are ready.");
 
     if let Ok([0]) = lessons.filter(name.eq("default")).count().get_results::<i64>(con).as_deref() {
         let default_lesson = NewLesson {
