@@ -4,6 +4,27 @@ use diesel;
 use diesel::SqliteConnection;
 use crossterm;
 use crate::window::Screen;
+use crate::db::models::NewBucket;
+use log::{error, info};
+
+fn insert_bucket(conn: &mut SqliteConnection, new_bucket: NewBucket) -> Result<(), diesel::result::Error> {
+    use diesel::prelude::*;
+    use crate::db::schema::bucket;
+
+    info!("DB: Inserting bucket to database");
+
+    let insert = diesel::insert_into(bucket::table) 
+        .values(&new_bucket)
+        .execute(conn);
+
+    match insert {
+        Ok(_) => Ok(()),
+        Err(err) => {
+            error!("Error saving a bucket to db: {:?}", err);
+            Err(err)
+        }
+    }
+}
 
 fn read_input() -> Result<String> {
     use crossterm::{terminal, event, execute};
@@ -62,10 +83,26 @@ pub fn run(conn: &mut SqliteConnection, value: &Option<String>) -> Result<()> {
     };
 
     println!("Add context notes for later reference.");
-    let note = read_input().unwrap();
+    let notes = if let Ok(note) = read_input() {
+        Some(note)
+    } else {
+        None
+    };
 
-    println!("");
-    println!("added: \"{}\"", src);
+    let new_bucket = NewBucket {
+        value: &src,
+        notes: notes.as_deref()
+    };
+
+    match insert_bucket(conn, new_bucket) {
+        Ok(_) =>  {
+            println!("");
+            println!("added: \"{}\"", src);
+        },
+        Err(_) => {
+            println!("Something unexpected happened!")
+        }
+    }
 
     Ok(())
 }

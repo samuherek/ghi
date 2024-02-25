@@ -2,6 +2,7 @@ use diesel::prelude::*;
 use chrono::NaiveDateTime;
 use crate::db::schema::quests;
 use crate::db::schema::lessons;
+use crate::db::schema::bucket;
 
 #[derive(Debug)]
 #[derive(Queryable, Selectable)]
@@ -57,4 +58,22 @@ pub struct NewLesson<'a> {
     pub remote: bool
 }
 
+#[derive(Debug)]
+#[derive(Queryable, Selectable)]
+#[diesel(table_name = bucket)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+pub struct Bucket {
+    pub id: i32,
+    pub value: String, 
+    pub notes: Option<String>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = bucket)]
+pub struct NewBucket<'a> {
+    pub value: &'a str,
+    pub notes: Option<&'a str>,
+}
 

@@ -101,7 +101,6 @@ fn main() -> anyhow::Result<()>{
 
     let cli = Cli::parse();
     let mut conn = db::establish_connection(&config);
-    db::ensure_tables(&mut conn);
 
     match &cli.command {
         Some(Commands::Add{value}) => commands::add::run(&mut conn, value)?,
