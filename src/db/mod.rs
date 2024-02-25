@@ -6,18 +6,14 @@ use diesel::sqlite::SqliteConnection;
 use std::env;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dirs;
-use log::info;
+use log::{info, debug};
+use super::GhiConfig;
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
-pub fn establish_connection() -> SqliteConnection {
-    let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| {
-        match dirs::home_dir() {
-            Some(p) => p.join(".ghi/test_database.sql").display().to_string(),
-            None => panic!("Could not resolve home direcotry")
-        }
-    });
-
+pub fn establish_connection(config: &GhiConfig) -> SqliteConnection {
+    let database_url = config.database_dir.join("database.sql").display().to_string();
+    debug!("database_url {}", database_url);
     info!("Setup database connection");
     let mut connection = SqliteConnection::establish(&database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));

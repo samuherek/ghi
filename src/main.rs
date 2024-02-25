@@ -37,15 +37,27 @@ struct GhiConfig {
     // - $HOME/.ghirc
     // - $HOME/.ghi/config
     // - $HOME/.config/ghi/config
-    database_path: Option<String>,
+    database_dir: PathBuf,
 }
 
 #[derive(Deserialize)]
 struct GhiUserConfig {
-   database_path: Option<String>,
+   database_dir: Option<String>,
 }
 
 const CONFIG_PATHS: [&str; 2] = [".ghi/config.toml", ".config/ghi/config.toml"];
+
+fn parse_database_dir(home: &PathBuf, value: &Option<String>) -> Option<PathBuf> {
+    if let Some(val) = value {
+        if val.starts_with("~") {
+            let relative_path = &val[2..];
+            return Some(home.join(relative_path));
+        } else {
+            return Some(PathBuf::from(val.to_string()));
+        }
+    }
+    return None;
+}
 
 fn get_config() -> GhiConfig {
     let home = dirs::home_dir().expect("Could not resolve home directory");
@@ -54,16 +66,26 @@ fn get_config() -> GhiConfig {
         .find(|path| path.exists());
 
     let config = if let Some(first_config_path) = first_config_path {
+        info!("Parsing config from {:?}", first_config_path);
         let data = std::fs::read_to_string(first_config_path).expect("The config path to exist");
         let user_config: GhiUserConfig = toml::from_str(&data).expect("Toml config could not parse");
+        let database_dir = if let Some(dir) = parse_database_dir(&home, &user_config.database_dir) {
+            info!("Resolved custom databse directory.");
+            dir
+        } else {
+            info!("Could not resolve database dir. Using default.");
+            home.join(".ghi")
+        };
+
         GhiConfig {
             config_dir: home.join(".ghi"),
-            database_path: user_config.database_path
+            database_dir,
         }
     } else {
+        info!("Using default config");
         GhiConfig {
             config_dir: home.join(".ghi"),
-            database_path: Some(home.join(".ghi/database.sql").display().to_string())
+            database_dir: home.join(".ghi")
         }
     };
 
@@ -75,11 +97,10 @@ fn main() -> anyhow::Result<()>{
     let log_file = std::fs::File::create(config.config_dir.join("logs.txt")).expect("Could not create the log file");
     WriteLogger::init(LevelFilter::max(), Config::default(), log_file).unwrap();
     
-
     info!("Application started");
 
     let cli = Cli::parse();
-    let mut conn = db::establish_connection();
+    let mut conn = db::establish_connection(&config);
     db::ensure_tables(&mut conn);
 
     match &cli.command {
