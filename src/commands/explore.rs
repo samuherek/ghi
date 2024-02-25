@@ -6,59 +6,8 @@ use crate::window::{ScreenBuf, Cell, Point, Patch, Rect};
 use std::io::Write;
 use crate::db::models;
 use log::{info, error};
-
-fn query_lessons(conn: &mut SqliteConnection) -> Vec<models::Lesson> {
-    use diesel::prelude::*;
-    use crate::db::schema::lessons::dsl::*;
-
-    info!("Query the lessons");
-
-    let res = lessons.get_results(conn)
-        .map_err(|err| {
-            error!("Error running the query lessons: {:?}", err);
-        }).unwrap();
-
-    info!("DB: lessons: {:?}", res.len());
-
-    res
-}
-
-fn query_quests(conn: &mut SqliteConnection, id: i32) -> Vec<models::Quest> {
-    use diesel::prelude::*;
-    use crate::db::schema::quests::dsl;
-
-    info!("Query the quests wiht lesson id {}", id);
-
-    let res = dsl::quests
-        .filter(dsl::lesson_id.eq(id))
-        .filter(dsl::pattern.is_not(""))
-        .get_results(conn)
-        .map_err(|err| {
-            error!("Error running the query quests: {:?}", err);
-        }).unwrap();
-
-    info!("DB: quests: {:?}", res.len());
-
-    res
-}
-
-fn query_quest(conn: &mut SqliteConnection, id: i32) -> Option<models::Quest> {
-    use diesel::prelude::*;
-    use crate::db::schema::quests::dsl;
-
-    info!("Query the quest wiht id {}", id);
-
-    let res = dsl::quests
-        .find(id)
-        .first(conn)
-        .map_err(|err| {
-            error!("Error runing the query quest: {:?}", err);
-        }).unwrap();
-
-    info!("DB: quest done");
-
-    Some(res) 
-}
+use crate::db::lessons::query_all_lessons;
+use crate::db::quests::{query_quests, query_quest};
 
 enum View {
     Lessons,
@@ -77,7 +26,7 @@ struct State {
 
 impl State {
     fn new(conn: &mut SqliteConnection) -> Self {
-        let lessons = query_lessons(conn);
+        let lessons = query_all_lessons(conn);
 
         Self {
             lessons_idx: 0,
