@@ -24,7 +24,7 @@ Access interactive adding and removing from `bash_history` or `zsh_history`
 $ ghi
 ```
 
------
+----
 
 Pattern matching to read:
 - https://spacy.io/usage/rule-based-matching/
