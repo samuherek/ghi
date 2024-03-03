@@ -105,4 +105,3 @@ Also, I can commit this to git repo for future reference and easy laoding on a d
 Additional features:
 - Add a command manually without the history search (TODO)
 - ...
-  
