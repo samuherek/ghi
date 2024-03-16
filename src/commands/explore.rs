@@ -5,7 +5,6 @@ use crossterm::style::Color;
 use crate::window::{ScreenBuf, Cell, Point, Patch, Rect};
 use std::io::Write;
 use crate::db::models;
-use log::{info, error};
 use crate::db::lessons::query_all_lessons;
 use crate::db::quests::{query_quests, query_quest};
 
@@ -74,27 +73,33 @@ impl State {
         match self.view {
             View::Lessons => {
                 self.view = View::Quests;
+                let request_id = uuid::Uuid::new_v4();
                 let id = self.lessons[self.lessons_idx].id;
-                info!("Switch to quests with lesson_id: {}", id);
+                let span = tracing::info_span!(
+                    "Switch to quests",
+                    %request_id,
+                    lesson_id = %id,
+                );
+                let _ = span.enter();
                 self.quests = query_quests(conn, id);
             },
             View::Quests => {
                 if self.quests_idx == 0 {
-                    info!("Switch to lessons");
+                    tracing::info!("Switch to lessons");
                     self.view = View::Lessons;
                 } else {
                     self.view = View::Quest;
-                    info!("We are about to get the quest id, {}", self.quests_idx);
+                    tracing::info!("We are about to get the quest id, {}", self.quests_idx);
                     if let Some(quest) = self.quests.get(self.quests_idx - 1) {
-                        info!("We are going to render quest with id {}", quest.id);
+                        tracing::info!("We are going to render quest with id {}", quest.id);
                         self.quest = query_quest(conn, quest.id);
                     } else {
-                        error!("Could not find the quest with index {}", self.quests_idx - 1);
+                        tracing::error!("Could not find the quest with index {}", self.quests_idx - 1);
                     }
                 }
             },
             View::Quest => {
-                info!("Switch to Quests");
+                tracing::info!("Switch to Quests");
                 self.view = View::Quests;
                 self.quest = None;
             }
@@ -330,7 +335,7 @@ pub fn run(conn: &mut SqliteConnection) -> std::io::Result<()> {
     let mut state = State::new(conn);
     let mut page = Screen::start()?;
 
-    info!("Start explore command");
+    tracing::info!("Start explore command");
 
     while !page.quit {
         while poll(std::time::Duration::ZERO)? {

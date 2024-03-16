@@ -2,35 +2,38 @@ use diesel::prelude::*;
 use diesel::SqliteConnection;
 use super::schema::quests::dsl;
 use super::models::Quest;
-use log::{info, error};
 
-pub fn query_quests(conn: &mut SqliteConnection, id: i32) -> Vec<Quest> {
-    info!("Query the quests wiht lesson id {}", id);
-
-    let res = dsl::quests
-        .filter(dsl::lesson_id.eq(id))
+#[tracing::instrument(name = "Query quests", skip(conn))]
+pub fn query_quests(conn: &mut SqliteConnection, lesson_id: i32) -> Vec<Quest> {
+    match dsl::quests
+        .filter(dsl::lesson_id.eq(lesson_id))
         .filter(dsl::pattern.is_not(""))
         .get_results(conn)
-        .map_err(|err| {
-            error!("Error running the query quests: {:?}", err);
-        }).unwrap();
-
-    info!("DB: quests: {:?}", res.len());
-
-    res
+        {
+            Ok(res) => {
+                tracing::info!("Query quests has been successful");
+                res 
+            },
+            Err(e) => {
+                tracing::error!("Fialed to execute query qyests: {}", e);
+                vec![]
+            }
+        }
 }
 
+#[tracing::instrument(name = "Query quest", skip(conn))]
 pub fn query_quest(conn: &mut SqliteConnection, id: i32) -> Option<Quest> {
-    info!("Query the quest wiht id {}", id);
-
-    let res = dsl::quests
+    match dsl::quests
         .find(id)
-        .first(conn)
-        .map_err(|err| {
-            error!("Error runing the query quest: {:?}", err);
-        }).unwrap();
-
-    info!("DB: quest done");
-
-    Some(res) 
+        .first(conn) 
+        {
+            Ok(res) => {
+                tracing::info!("Query quest successful");
+                Some(res)
+            },
+            Err(e) => {
+                tracing::error!("Failed to execute query quest: {}", e);
+                None
+            }
+        }
 }

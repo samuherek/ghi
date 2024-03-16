@@ -4,11 +4,10 @@ mod window;
 mod db;
 
 use clap::{Parser, Subcommand};
-use simplelog::{WriteLogger, LevelFilter, Config};
-use log::info;
 use dirs;
 use std::path::PathBuf;
 use serde::Deserialize;
+use tracing_subscriber::prelude::*;
 
 #[derive(Parser)]
 #[command(author = "Sam Uherek <samuherekbiz@gmail.com>")]
@@ -52,11 +51,10 @@ fn parse_database_dir(home: &PathBuf, value: &Option<String>) -> Option<PathBuf>
         if val.starts_with("~") {
             let relative_path = &val[2..];
             return Some(home.join(relative_path));
-        } else {
-            return Some(PathBuf::from(val.to_string()));
-        }
+        } 
+        return Some(PathBuf::from(val.to_string()));
     }
-    return None;
+    None
 }
 
 fn get_config() -> GhiConfig {
@@ -66,14 +64,14 @@ fn get_config() -> GhiConfig {
         .find(|path| path.exists());
 
     let config = if let Some(first_config_path) = first_config_path {
-        info!("Parsing config from {:?}", first_config_path);
+        tracing::info!("Parsing config from {:?}", first_config_path);
         let data = std::fs::read_to_string(first_config_path).expect("The config path to exist");
         let user_config: GhiUserConfig = toml::from_str(&data).expect("Toml config could not parse");
         let database_dir = if let Some(dir) = parse_database_dir(&home, &user_config.database_dir) {
-            info!("Resolved custom databse directory.");
+            tracing::info!("Resolved custom databse directory.");
             dir
         } else {
-            info!("Could not resolve database dir. Using default.");
+            tracing::info!("Could not resolve database dir. Using default.");
             home.join(".ghi")
         };
 
@@ -82,7 +80,7 @@ fn get_config() -> GhiConfig {
             database_dir,
         }
     } else {
-        info!("Using default config");
+        tracing::info!("Using default config");
         GhiConfig {
             config_dir: home.join(".ghi"),
             database_dir: home.join(".ghi")
@@ -95,9 +93,16 @@ fn get_config() -> GhiConfig {
 fn main() -> anyhow::Result<()>{
     let config = get_config();
     let log_file = std::fs::File::create(config.config_dir.join("logs.txt")).expect("Could not create the log file");
-    WriteLogger::init(LevelFilter::max(), Config::default(), log_file).unwrap();
+
+    let subscriber = tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::Layer::new()
+              .with_writer(log_file)
+              .with_ansi(false)
+             );
+
+    tracing::subscriber::set_global_default(subscriber).expect("Tracing subscriber to set defaults");
     
-    info!("Application started");
+    tracing::info!("Application started");
 
     let cli = Cli::parse();
     let mut conn = db::establish_connection(&config);
@@ -112,5 +117,5 @@ fn main() -> anyhow::Result<()>{
         }
     }
 
-    return Ok(());
+    Ok(())
 }

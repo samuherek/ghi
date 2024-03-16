@@ -2,18 +2,18 @@ use diesel::SqliteConnection;
 use diesel::prelude::*;
 use super::schema::lessons::dsl::*;
 use super::models::Lesson;
-use log::{error, info};
 
+#[tracing::instrument(name = "Query all lessons", skip(conn))]
 pub fn query_all_lessons(conn: &mut SqliteConnection) -> Vec<Lesson> {
-    info!("Query the lessons");
-
-    let res = lessons.get_results(conn)
-        .map_err(|err| {
-            error!("Error running the query lessons: {:?}", err);
-        }).unwrap();
-
-    info!("DB: lessons: {:?}", res.len());
-
-    res
+    match lessons.get_results(conn) {
+        Ok(res) => {
+            tracing::info!("Query all lessons successful");
+            res
+        },
+        Err(e) => {
+            tracing::error!("Failed to query all lessons: {}", e);
+            vec![]
+        }
+    }
 }
 
